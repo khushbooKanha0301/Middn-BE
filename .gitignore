@@ -1,0 +1,6 @@
+node_modules
+/node_modules
+dist/
+dist/schema/user.schema.d.ts
+*.js
+dist/schema/user.schema.js
