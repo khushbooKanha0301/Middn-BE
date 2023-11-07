@@ -77,13 +77,44 @@ export class AuthController {
     @Param("address") address: string
   ) {
     try {
-      const escrows = await this.escrowService.getActiveEscrows(address);
-      return response.status(HttpStatus.OK).json({
-        message: "Escrow fetched successfully",
-        data: {
-          escrows,
-        },
-      });
+      const page = req.query.page ? +req.query.page : 1;
+      const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
+      const escrows = await this.escrowService.getActiveEscrows(page, pageSize , address);
+      
+      const escrowsCount = await this.escrowService.getEscrowActiveCount(
+        address
+      );
+      
+      if (escrows.length > 0) {
+        await Promise.all(
+          escrows.map(async (user: any) => {
+            let newImage = "";
+            if (user.profile) {
+              const s3 = this.configService.get("s3");
+              const bucketName = this.configService.get("aws_s3_bucket_name");
+              newImage = s3.getSignedUrl("getObject", {
+                Bucket: bucketName,
+                Key: user.profile ? user.profile : "",
+                Expires: 600000,
+              });
+              
+              user.newImage = newImage ? newImage : null,
+              user.fname_alias = user.fname_alias ? user.fname_alias : "John";
+              user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
+            }
+           })
+        );
+       
+        return response.status(HttpStatus.OK).json({
+          status: "Escrow fetched successfully",
+          data: escrows,
+          escrowsCount: escrowsCount
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          message: "Escrow not found",
+        });
+      }
     } catch (err) {
       console.log(err);
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
