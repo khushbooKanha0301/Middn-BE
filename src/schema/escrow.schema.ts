@@ -26,6 +26,8 @@ export class Escrow {
   @Prop()
   transaction_number: string;
   @Prop()
+  is_deleted: boolean;
+  @Prop()
   createdAt: string;
   @Prop()
   updatedAt: string;

@@ -1,4 +1,4 @@
-import { IsOptional, IsNumber, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsString, IsBoolean } from "class-validator";
 export class CreateEscrowDto {
   @IsOptional()
   @IsString()
@@ -51,4 +51,8 @@ export class CreateEscrowDto {
   @IsOptional()
   @IsString()
   createdAt: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_deleted: boolean;
 }

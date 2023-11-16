@@ -79,12 +79,16 @@ export class AuthController {
     try {
       const page = req.query.page ? +req.query.page : 1;
       const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
-      const escrows = await this.escrowService.getActiveEscrows(page, pageSize , address);
-      
+      const escrows = await this.escrowService.getActiveEscrows(
+        page,
+        pageSize,
+        address
+      );
+
       const escrowsCount = await this.escrowService.getEscrowActiveCount(
         address
       );
-      
+
       if (escrows.length > 0) {
         await Promise.all(
           escrows.map(async (user: any) => {
@@ -97,18 +101,20 @@ export class AuthController {
                 Key: user.profile ? user.profile : "",
                 Expires: 600000,
               });
-              
-              user.newImage = newImage ? newImage : null,
-              user.fname_alias = user.fname_alias ? user.fname_alias : "John";
+
+              (user.newImage = newImage ? newImage : null),
+                (user.fname_alias = user.fname_alias
+                  ? user.fname_alias
+                  : "John");
               user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
             }
-           })
+          })
         );
-       
+
         return response.status(HttpStatus.OK).json({
           status: "Escrow fetched successfully",
           data: escrows,
-          escrowsCount: escrowsCount
+          escrowsCount: escrowsCount,
         });
       } else {
         return response.status(HttpStatus.OK).json({

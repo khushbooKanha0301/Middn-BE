@@ -17,7 +17,6 @@ export class EscrowService {
     return newEscrow.save();
   }
 
-  
   async getActiveEscrows( page?: number,
     pageSize?: number,
     address?: string
@@ -27,7 +26,8 @@ export class EscrowService {
         let escrowsQuery = this.escrowModel.aggregate([
           {
             $match:{
-              user_address: address
+              user_address: address,
+              is_deleted : false
             }
           },
           {
@@ -53,6 +53,8 @@ export class EscrowService {
                     $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
                   },
                   "escrow_type":"$escrow_type",
+                  "user_address":"$user_address",
+                  "user_id":"$user_id",
                   "price_type":"$price_type",
                   "fixed_price":"$fixed_price",
                   "flex_min_price":"$flex_min_price",
@@ -85,7 +87,7 @@ export class EscrowService {
       let escrowsQuery = this.escrowModel.find();
       if(address)
       {
-        escrowsQuery = escrowsQuery.where({user_address: address});
+        escrowsQuery = escrowsQuery.where({user_address: address, is_deleted : false});
       }
       const count = await escrowsQuery.countDocuments();
       return count;
@@ -102,6 +104,11 @@ export class EscrowService {
     
     try {
       let escrowsQuery = this.escrowModel.aggregate([
+        {
+          $match:{
+            is_deleted: false
+          }
+        },
         {
             $lookup: {
               from: "users",
@@ -125,6 +132,8 @@ export class EscrowService {
                   $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
                 },
                 "escrow_type":"$escrow_type",
+                "user_address":"$user_address",
+                "user_id":"$user_id",
                 "price_type":"$price_type",
                 "fixed_price":"$fixed_price",
                 "flex_min_price":"$flex_min_price",
@@ -154,8 +163,125 @@ export class EscrowService {
   }
 
   async getEscrowCount() {
-    const count = await this.escrowModel.countDocuments();
-    return count;
+    try {
+      let escrowsQuery = this.escrowModel.find({
+        is_deleted: false
+      });
+      
+      const count = await escrowsQuery.countDocuments();
+      return count;
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
+
+  async getDataById(id: string) {
+    try {
+      const getEscrowById = await this.escrowModel.findById(id);
+      return getEscrowById;
+    } catch (err) {
+      console.log(err);
+      return err.message;
+    }
+  }
+  async findByIdAndDelete(id: string) {
+    try {
+      let escrowsQuery = this.escrowModel.findById({
+        id: id
+      });
+
+      if (!escrowsQuery) {
+        throw new NotFoundException(`Escrow #${id} not found`);
+      }
+
+      const existingEscrow = await this.escrowModel.findByIdAndUpdate(
+        id,
+        {
+          is_deleted : true
+        }
+      );
+      if (!existingEscrow) {
+        throw new NotFoundException(`Escrow #${id} deleted successfully `);
+      }
+      return existingEscrow;
+      
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async updateEscrow(id:string) {
+    try {
+      const updateDeleted = await this.escrowModel
+        .findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              is_deleted: true,
+            },
+          },
+          { new: true }
+        )
+        .exec();
+        if (!updateDeleted) {
+          throw new NotFoundException(`Escrow #${id} not found`);
+        }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async updateEscrowData(id:string, escrowData : any) {
+    try {
+      const updateDeleted = await this.escrowModel
+        .findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              escrowData,
+            },
+          },
+          { new: true }
+        )
+        .exec();
+        console.log(updateDeleted)
+        if (!updateDeleted) {
+          throw new NotFoundException(`Escrow #${id} not found`);
+        }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async updateDeletedById(id: string) {
+    try {
+      const updateDeleted = await this.escrowModel
+        .findByIdAndUpdate(
+          id,
+          {
+            $set: {
+              is_deleted: true,
+            },
+          },
+          { new: true }
+        )
+        .exec();
+        if (!updateDeleted) {
+          throw new NotFoundException(`Escrow #${id} not found`);
+        }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+
+  
 
 }
