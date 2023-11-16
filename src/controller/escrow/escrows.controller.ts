@@ -145,25 +145,47 @@ export class EscrowsController {
     }
   }
 
-  @SkipThrottle(false)
-  @Put("/editEscrow/:id")
-  async editEscrow(
-    @Req() req: any,
-    @Res() response,
-    @Param("id") id: string
-  ) {
+  @Get("/getEscrowsById/:id")
+  async getEscrowsById(@Req() req: any, @Res() response, @Param("id") id: string) {
     try {
-      console.log("calling")
-      const reqData = req.body;
- console.log("reqData ", reqData);
-      let getEscrow = await this.escrowService.getDataById(
-        id
-      );
-     
+      
+      let getEscrow = await this.escrowService.getDataById(id);
       if (!getEscrow) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
-      const escrowId = getEscrow._id.toString();
+      let newImage = "";
+      if (getEscrow.profile) {
+        const s3 = this.configService.get("s3");
+        const bucketName = this.configService.get("aws_s3_bucket_name");
+        newImage = await s3.getSignedUrl("getObject", {
+          Bucket: bucketName,
+          Key: getEscrow.profile ? getEscrow.profile : "",
+          Expires: 604800,
+        });
+      }
+      getEscrow.newImage = newImage ? newImage : null
+      getEscrow.fname_alias = getEscrow.fname_alias ? getEscrow.fname_alias : "John";
+      getEscrow.lname_alias = getEscrow.lname_alias ? getEscrow.lname_alias : "Doe";
+      return response.status(HttpStatus.OK).json({
+        status: "success",
+        data: getEscrow
+      });
+
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @SkipThrottle(false)
+  @Put("/editEscrow/:id")
+  async editEscrow(@Req() req: any, @Res() response, @Param("id") id: string) {
+    try {
+      const reqData = req.body;
+      let getEscrow = await this.escrowService.getDataById(id);
+ 
+      if (!getEscrow) {
+        throw new NotFoundException(`Escrow #${id} not found`);
+      }
       let escrowDto = {
         escrow_type: reqData?.escrowType,
         price_type: reqData?.priceType,
@@ -174,24 +196,24 @@ export class EscrowsController {
         object: reqData?.object,
         description: reqData?.description,
         time_constraints: reqData?.processTime,
-        transaction_number: (
-          Math.floor(Math.random() * (9999999999 - 1000000000 + 1)) + 1000000000
-        ).toString(),
         is_deleted: false,
         createdAt: moment.utc().format(),
       };
-      await this.escrowService.updateEscrowData(
-        id,
-        escrowDto
-      );
+      await this.escrowService.updateEscrowData(id, escrowDto);
+      let escrow = await this.escrowService.getDataById(id);
+
       return response.status(HttpStatus.OK).json({
         message: "Escrow has been successfully updated.",
+        data: {
+          escrow_number: escrow?.transaction_number,
+        },
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
 
+  @SkipThrottle(false)
   @Get("/deleteEscrows/:id")
   async deleteEscrows(
     @Req() req: any,
@@ -199,16 +221,11 @@ export class EscrowsController {
     @Param("id") id: string
   ): Promise<any> {
     try {
-      const getEscrow = await this.escrowService.getDataById(id);
-      console.log("getEscrow ", getEscrow);
-
-      if (!getEscrow) {
-        throw new NotFoundException(`Escrow #${id} not found`);
-      }
       await this.escrowService.updateDeletedById(id);
       return response.status(HttpStatus.OK).json({
         message: "Escrow deleted successfully...",
       });
     } catch (error) {}
   }
+
 }

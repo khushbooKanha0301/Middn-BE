@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { CreateEscrowDto } from "src/dto/create-escrows.dto";
 import { IEscrows } from "src/interface/escrows.interface";
-import { Model } from "mongoose";
+import { Types , Model } from "mongoose";
 import { ConfigService } from "@nestjs/config";
 
 @Injectable()
@@ -13,81 +13,92 @@ export class EscrowService {
   ) {}
 
   async createEscrow(CreateEscrowDto: CreateEscrowDto): Promise<IEscrows> {
-    const newEscrow = await new this.escrowModel(CreateEscrowDto);
-    return newEscrow.save();
+    try {
+      const newEscrow = new this.escrowModel(CreateEscrowDto);
+      return await newEscrow.save();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
-  async getActiveEscrows( page?: number,
+  async getActiveEscrows(
+    page?: number,
     pageSize?: number,
     address?: string
-    ): Promise<any> {
-      try {
-
-        let escrowsQuery = this.escrowModel.aggregate([
-          {
-            $match:{
-              user_address: address,
-              is_deleted : false
-            }
+  ): Promise<any> {
+    try {
+      let escrowsQuery = this.escrowModel.aggregate([
+        {
+          $match: {
+            user_address: address,
+            is_deleted: false,
           },
-          {
-              $lookup: {
-                from: "users",
-                localField: "user_address",
-                foreignField: "wallet_address",
-                as: "user_info"
-              }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "user_address",
+            foreignField: "wallet_address",
+            as: "user_info",
           },
-          {
-            $unwind: {
-              path: "$user_info",
-              preserveNullAndEmptyArrays: true, // Make the join optional
+        },
+        {
+          $unwind: {
+            path: "$user_info",
+            preserveNullAndEmptyArrays: true, // Make the join optional
+          },
+        },
+        {
+          $project: {
+            user_name: {
+              $concat: [
+                "$user_info.fname_alias",
+                " ",
+                "$user_info.lname_alias",
+              ],
             },
+            profile: {
+              $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
+            },
+            escrow_type: "$escrow_type",
+            user_address: "$user_address",
+            user_id: "$user_id",
+            price_type: "$price_type",
+            fixed_price: "$fixed_price",
+            flex_min_price: "$flex_min_price",
+            flex_max_price: "$flex_max_price",
+            category: "$category",
+            object: "$object",
+            title: "$title",
+            description: "$description",
+            time_constraints: "$time_constraints",
+            transaction_number: "$transaction_number",
+            createdAt: "$createdAt",
           },
-          {
-              $project: {
-                  "user_name": {
-                      $concat: ["$user_info.fname_alias", " ", "$user_info.lname_alias"]
-                  },
-                  "profile": {
-                    $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
-                  },
-                  "escrow_type":"$escrow_type",
-                  "user_address":"$user_address",
-                  "user_id":"$user_id",
-                  "price_type":"$price_type",
-                  "fixed_price":"$fixed_price",
-                  "flex_min_price":"$flex_min_price",
-                  "flex_max_price":"$flex_max_price",
-                  "category": "$category",
-                  "object":"$object",
-                  "title":"$title",
-                  "description":"$description",
-                  "time_constraints":"$time_constraints",
-                  "transaction_number":"$transaction_number",
-                  "createdAt": "$createdAt"
-              }
-          }
-        ]);
-        
-        if (page && pageSize) {
-          // Calculate the number of documents to skip
-          const skipCount = (page - 1) * pageSize;
-          escrowsQuery = escrowsQuery.skip(skipCount).limit(pageSize);
-        }
-        return await escrowsQuery.exec();
+        },
+      ]);
 
-      } catch (error) {
-        console.error(error);
-        throw error;
+      if (page && pageSize) {
+        // Calculate the number of documents to skip
+        const skipCount = (page - 1) * pageSize;
+        escrowsQuery = escrowsQuery.skip(skipCount).limit(pageSize);
       }
+      return await escrowsQuery.exec();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
+
   async getEscrowActiveCount(address?: string): Promise<any> {
     try {
       let escrowsQuery = this.escrowModel.find();
-      if(address)
-      {
-        escrowsQuery = escrowsQuery.where({user_address: address, is_deleted : false});
+      if (address) {
+        escrowsQuery = escrowsQuery.where({
+          user_address: address,
+          is_deleted: false,
+        });
       }
       const count = await escrowsQuery.countDocuments();
       return count;
@@ -97,25 +108,21 @@ export class EscrowService {
     }
   }
 
-  async fetchAllEscrows(
-    page?: number,
-    pageSize?: number
-  ): Promise<any> {
-    
+  async fetchAllEscrows(page?: number, pageSize?: number): Promise<any> {
     try {
       let escrowsQuery = this.escrowModel.aggregate([
         {
-          $match:{
-            is_deleted: false
-          }
+          $match: {
+            is_deleted: false,
+          },
         },
         {
-            $lookup: {
-              from: "users",
-              localField: "user_address",
-              foreignField: "wallet_address",
-              as: "user_info"
-            }
+          $lookup: {
+            from: "users",
+            localField: "user_address",
+            foreignField: "wallet_address",
+            as: "user_info",
+          },
         },
         {
           $unwind: {
@@ -124,37 +131,41 @@ export class EscrowService {
           },
         },
         {
-            $project: {
-                "user_name": {
-                    $concat: ["$user_info.fname_alias", " ", "$user_info.lname_alias"]
-                },
-                profile: {
-                  $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
-                },
-                "escrow_type":"$escrow_type",
-                "user_address":"$user_address",
-                "user_id":"$user_id",
-                "price_type":"$price_type",
-                "fixed_price":"$fixed_price",
-                "flex_min_price":"$flex_min_price",
-                "flex_max_price":"$flex_max_price",
-                "category": "$category",
-                "object":"$object",
-                "title":"$title",
-                "description":"$description",
-                "time_constraints":"$time_constraints",
-                "transaction_number":"$transaction_number",
-                "createdAt": "$createdAt"
-            }
-        }
+          $project: {
+            user_name: {
+              $concat: [
+                "$user_info.fname_alias",
+                " ",
+                "$user_info.lname_alias",
+              ],
+            },
+            profile: {
+              $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
+            },
+            escrow_type: "$escrow_type",
+            user_address: "$user_address",
+            user_id: "$user_id",
+            price_type: "$price_type",
+            fixed_price: "$fixed_price",
+            flex_min_price: "$flex_min_price",
+            flex_max_price: "$flex_max_price",
+            category: "$category",
+            object: "$object",
+            title: "$title",
+            description: "$description",
+            time_constraints: "$time_constraints",
+            transaction_number: "$transaction_number",
+            createdAt: "$createdAt",
+          },
+        },
       ]);
-      
+
       if (page && pageSize) {
         // Calculate the number of documents to skip
         const skipCount = (page - 1) * pageSize;
         escrowsQuery = escrowsQuery.skip(skipCount).limit(pageSize);
       }
-    
+
       return await escrowsQuery.exec();
     } catch (error) {
       console.error(error);
@@ -165,12 +176,11 @@ export class EscrowService {
   async getEscrowCount() {
     try {
       let escrowsQuery = this.escrowModel.find({
-        is_deleted: false
+        is_deleted: false,
       });
-      
+
       const count = await escrowsQuery.countDocuments();
       return count;
-
     } catch (error) {
       console.error(error);
       throw error;
@@ -179,42 +189,89 @@ export class EscrowService {
 
   async getDataById(id: string) {
     try {
-      const getEscrowById = await this.escrowModel.findById(id);
-      return getEscrowById;
+      const ids = new Types.ObjectId(id);
+      let escrowsQuery = this.escrowModel.aggregate([
+        {
+          $match: {
+            _id: ids,
+            is_deleted: false
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "user_address",
+            foreignField: "wallet_address",
+            as: "user_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user_info",
+            preserveNullAndEmptyArrays: true, // Make the join optional
+          },
+        },
+        {
+          $project: {
+            user_name: {
+              $concat: [
+                "$user_info.fname_alias",
+                " ",
+                "$user_info.lname_alias",
+              ],
+            },
+            profile: {
+              $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
+            },
+            escrow_type: "$escrow_type",
+            user_address: "$user_address",
+            user_id: "$user_id",
+            price_type: "$price_type",
+            fixed_price: "$fixed_price",
+            flex_min_price: "$flex_min_price",
+            flex_max_price: "$flex_max_price",
+            category: "$category",
+            object: "$object",
+            title: "$title",
+            description: "$description",
+            time_constraints: "$time_constraints",
+            transaction_number: "$transaction_number",
+            createdAt: "$createdAt",
+          },
+        },
+        {
+          $limit: 1
+        }
+      ]);
+      const result = await escrowsQuery.exec();
+      return result.length > 0 ? result[0] : null;
     } catch (err) {
-      console.log(err);
       return err.message;
     }
   }
+
   async findByIdAndDelete(id: string) {
     try {
-      let escrowsQuery = this.escrowModel.findById({
-        id: id
-      });
+      let escrowsQuery = this.escrowModel.findById(id);
 
       if (!escrowsQuery) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
 
-      const existingEscrow = await this.escrowModel.findByIdAndUpdate(
-        id,
-        {
-          is_deleted : true
-        }
-      );
+      const existingEscrow = await this.escrowModel.findByIdAndUpdate(id, {
+        is_deleted: true,
+      });
       if (!existingEscrow) {
         throw new NotFoundException(`Escrow #${id} deleted successfully `);
       }
       return existingEscrow;
-      
-
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
 
-  async updateEscrow(id:string) {
+  async updateEscrow(id: string) {
     try {
       const updateDeleted = await this.escrowModel
         .findByIdAndUpdate(
@@ -227,18 +284,18 @@ export class EscrowService {
           { new: true }
         )
         .exec();
-        if (!updateDeleted) {
-          throw new NotFoundException(`Escrow #${id} not found`);
-        }
+      if (!updateDeleted) {
+        throw new NotFoundException(`Escrow #${id} not found`);
+      }
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
 
-  async updateEscrowData(id:string, escrowData : any) {
+  async updateEscrowData(id: string, escrowData: any) {
     try {
-      const updateDeleted = await this.escrowModel
+      const updateEscrowData = await this.escrowModel
         .findByIdAndUpdate(
           id,
           {
@@ -249,10 +306,9 @@ export class EscrowService {
           { new: true }
         )
         .exec();
-        console.log(updateDeleted)
-        if (!updateDeleted) {
-          throw new NotFoundException(`Escrow #${id} not found`);
-        }
+      if (!updateEscrowData) {
+        throw new NotFoundException(`Escrow #${id} not found`);
+      }
     } catch (error) {
       console.error(error);
       throw error;
@@ -272,16 +328,12 @@ export class EscrowService {
           { new: true }
         )
         .exec();
-        if (!updateDeleted) {
-          throw new NotFoundException(`Escrow #${id} not found`);
-        }
+      if (!updateDeleted) {
+        throw new NotFoundException(`Escrow #${id} not found`);
+      }
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
-
-
-  
-
 }
