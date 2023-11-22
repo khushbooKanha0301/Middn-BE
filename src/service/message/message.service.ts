@@ -21,7 +21,7 @@ export class MessageService {
 			const params = {
 				Bucket: bucketName,
 				Key: key,
-				Body: file.buffer,
+				//Body: file.buffer,
 			};
 
 			await new Promise(async (resolve,reject) => {

@@ -214,7 +214,7 @@ export class EscrowsController {
   }
 
   @SkipThrottle(false)
-  @Get("/deleteEscrows/:id")
+  @Put("/deleteEscrows/:id")
   async deleteEscrows(
     @Req() req: any,
     @Res() response,
