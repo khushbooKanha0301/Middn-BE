@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { CreateEscrowDto } from "src/dto/create-escrows.dto";
 import { IEscrows } from "src/interface/escrows.interface";
-import { Types , Model } from "mongoose";
+import { Types, Model } from "mongoose";
 import { ConfigService } from "@nestjs/config";
 
 @Injectable()
@@ -194,7 +194,7 @@ export class EscrowService {
         {
           $match: {
             _id: ids,
-            is_deleted: false
+            is_deleted: false,
           },
         },
         {
@@ -240,8 +240,8 @@ export class EscrowService {
           },
         },
         {
-          $limit: 1
-        }
+          $limit: 1,
+        },
       ]);
       const result = await escrowsQuery.exec();
       return result.length > 0 ? result[0] : null;
@@ -299,13 +299,12 @@ export class EscrowService {
         .findByIdAndUpdate(
           id,
           {
-            $set: {
-              escrowData,
-            },
+            $set: escrowData,
           },
           { new: true }
         )
         .exec();
+
       if (!updateEscrowData) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }

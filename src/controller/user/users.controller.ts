@@ -66,6 +66,7 @@ export class UsersController {
     try {
       let clientIp =
         req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+      
       if (clientIp) {
         clientIp = clientIp.split(",")[0];
       }
@@ -139,7 +140,6 @@ export class UsersController {
           };
           if (addressByUser.profile && addressByUser.profile !== "") {
             const myKey = addressByUser.profile;
-
             imageUrl = s3.getSignedUrl("getObject", {
               Bucket: bucketName,
               Key: myKey,
@@ -162,6 +162,7 @@ export class UsersController {
             last_login_at: lastLogin,
             joined_at: location,
           };
+
           imageUrl = null;
           userInfo = await this.userService.createUser(createUserDto);
         }

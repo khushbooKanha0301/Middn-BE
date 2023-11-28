@@ -146,9 +146,12 @@ export class EscrowsController {
   }
 
   @Get("/getEscrowsById/:id")
-  async getEscrowsById(@Req() req: any, @Res() response, @Param("id") id: string) {
+  async getEscrowsById(
+    @Req() req: any,
+    @Res() response,
+    @Param("id") id: string
+  ) {
     try {
-      
       let getEscrow = await this.escrowService.getDataById(id);
       if (!getEscrow) {
         throw new NotFoundException(`Escrow #${id} not found`);
@@ -163,14 +166,17 @@ export class EscrowsController {
           Expires: 604800,
         });
       }
-      getEscrow.newImage = newImage ? newImage : null
-      getEscrow.fname_alias = getEscrow.fname_alias ? getEscrow.fname_alias : "John";
-      getEscrow.lname_alias = getEscrow.lname_alias ? getEscrow.lname_alias : "Doe";
+      getEscrow.newImage = newImage ? newImage : null;
+      getEscrow.fname_alias = getEscrow.fname_alias
+        ? getEscrow.fname_alias
+        : "John";
+      getEscrow.lname_alias = getEscrow.lname_alias
+        ? getEscrow.lname_alias
+        : "Doe";
       return response.status(HttpStatus.OK).json({
         status: "success",
-        data: getEscrow
+        data: getEscrow,
       });
-
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
@@ -181,8 +187,46 @@ export class EscrowsController {
   async editEscrow(@Req() req: any, @Res() response, @Param("id") id: string) {
     try {
       const reqData = req.body;
+
+      let userDetails = await this.userService.getFindbyAddress(
+        req.headers.authData.verifiedAddress
+      );
+      let errorMessage = null;
+      if (!userDetails?.wallet_address) {
+        errorMessage = "User not found";
+      } else if (!reqData?.escrowType) {
+        errorMessage = "Escrow type missing";
+      } else if (!reqData?.priceType) {
+        errorMessage = "Please select price type fixed or flexible";
+      } else if (
+        reqData?.priceType &&
+        reqData?.priceType == "fixed" &&
+        !reqData?.price
+      ) {
+        errorMessage = "Fixed price is missing";
+      } else if (
+        reqData?.priceType &&
+        reqData?.priceType == "flexible" &&
+        (!reqData?.minPrice || !reqData?.maxPrice)
+      ) {
+        errorMessage = "Flexible minimum price or maximum price is missing";
+      } else if (!reqData?.category) {
+        errorMessage = "Category is missing";
+      } else if (!reqData?.object) {
+        errorMessage = "Object is missing";
+      } else if (!reqData?.description) {
+        errorMessage = "Description is missing";
+      } else if (!reqData?.processTime) {
+        errorMessage = "Process Time is missing";
+      }
+      if (errorMessage) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ status: "failure", message: errorMessage });
+      }
+      
       let getEscrow = await this.escrowService.getDataById(id);
- 
+
       if (!getEscrow) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
@@ -201,7 +245,6 @@ export class EscrowsController {
       };
       await this.escrowService.updateEscrowData(id, escrowDto);
       let escrow = await this.escrowService.getDataById(id);
-
       return response.status(HttpStatus.OK).json({
         message: "Escrow has been successfully updated.",
         data: {
@@ -227,5 +270,4 @@ export class EscrowsController {
       });
     } catch (error) {}
   }
-
 }
