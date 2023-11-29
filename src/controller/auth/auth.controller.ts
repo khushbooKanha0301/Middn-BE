@@ -119,6 +119,7 @@ export class AuthController {
       } else {
         return response.status(HttpStatus.OK).json({
           message: "Escrow not found",
+          escrowsCount: 0
         });
       }
     } catch (err) {
