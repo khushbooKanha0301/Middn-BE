@@ -109,7 +109,10 @@ export class UsersController {
         ? userData?.address
         : userData?.verifiedAddress;
       const message = getSignMessage(address, nonce);
+ console.log("message ", message);
+
       const signature = query.signatureId;
+ console.log("signature ", signature);
       const walletType = body.walletType;
       const s3 = this.configService.get("s3");
       const bucketName = this.configService.get("aws_s3_bucket_name");
@@ -119,12 +122,16 @@ export class UsersController {
         message,
         signature
       );
+      console.log("address ", address);
+      console.log("verifiedAddress ", verifiedAddress);
       if (verifiedAddress.toLowerCase() == address.toLowerCase()) {
         let addressByUser = await this.userService.getFindbyAddress(address);
+ console.log("addressByUser ", addressByUser);
         let userInfo;
         const token = await jwt.sign({ verifiedAddress, nonce }, jwtSecret, {
           expiresIn: "1w",
         });
+        console.log("token ", token);
         let newToken = await this.tokenService.createToken({ token });
         let lastLogin = moment.utc(nonce).format();
         if (addressByUser) {

@@ -18,6 +18,8 @@ import { UserService } from "src/service/user/users.service";
 import { EscrowService } from "src/service/escrow/escrows.service";
 import { NotFoundException } from "@nestjs/common";
 const moment = require("moment");
+const numericRegex = /[^0-9.]/g;
+
 
 @SkipThrottle()
 @Controller("escrows")
@@ -27,6 +29,16 @@ export class EscrowsController {
     private readonly userService: UserService,
     private readonly escrowService: EscrowService
   ) {}
+
+  category: "high_value_items"
+  description: "desc"
+  escrowType: "seller"
+  maxPrice: ""
+  minPrice:  ""
+  object: "Jewelery"
+  price : "10"
+  priceType: "fixed"
+  processTime: "24 Hours"
 
   @SkipThrottle(false)
   @Post("/createEscrow")
@@ -63,7 +75,36 @@ export class EscrowsController {
         errorMessage = "Description is missing";
       } else if (!reqData?.processTime) {
         errorMessage = "Process Time is missing";
+      } else if ((reqData?.object != 'Jewelery') || 
+      (reqData?.category != 'high_value_items') ||  
+      (reqData?.processTime != '24 Hours')
+      ) {
+        errorMessage = "Something went wrong";
+      } else if ((reqData?.priceType != 'fixed') && (reqData?.priceType != 'flexible')){
+        errorMessage = "Please add Fixed or Flexible Price.";
       }
+      else if ((reqData?.escrowType != 'seller') && (reqData?.escrowType != 'buyer')){
+        errorMessage = "Please select Buyer or Seller.";
+      } 
+      else if ((reqData?.priceType && reqData?.priceType == "fixed" && reqData?.price.match(numericRegex)) || 
+      (reqData?.priceType && reqData?.priceType == "flexible" && (reqData?.minPrice.match(numericRegex) || reqData?.maxPrice.match(numericRegex)))  
+      ) {
+        errorMessage = "Only numeric values accept";
+      }
+      else if ((reqData?.priceType && reqData?.priceType == "fixed")) {
+        if((reqData?.minPrice && (reqData?.minPrice.match(numericRegex) || !reqData?.minPrice.match(numericRegex))) || 
+        (reqData?.maxPrice && (reqData?.maxPrice.match(numericRegex) || !reqData?.maxPrice.match(numericRegex)))){
+          errorMessage = "Only Fixed Price Accepted";
+        } 
+
+      }
+      else if ((reqData?.priceType && reqData?.priceType == "flexible")){
+        if(reqData?.price && (reqData?.price.match(numericRegex) || !reqData?.price.match(numericRegex))){
+          errorMessage = "Only Flexible Minimum and Maxium Price Accepted";
+        } 
+      }
+      
+
       if (errorMessage) {
         return response
           .status(HttpStatus.BAD_REQUEST)
@@ -100,51 +141,52 @@ export class EscrowsController {
     }
   }
 
-  @Get("/getAllEscrows")
-  async getAllEscrows(@Req() req: any, @Res() response) {
-    try {
-      const page = req.query.page ? +req.query.page : 1;
-      const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
-      const escrows = await this.escrowService.fetchAllEscrows(page, pageSize);
-      const escrowsCount = await this.escrowService.getEscrowCount();
+  // @Get("/getAllEscrows")
+  // async getAllEscrows(@Req() req: any, @Res() response) {
+  //   try {
+  //     const page = req.query.page ? +req.query.page : 1;
+  //     const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
+  //     const escrows = await this.escrowService.fetchAllEscrows(page, pageSize);
+  //     const escrowsCount = await this.escrowService.getEscrowCount();
 
-      if (escrows.length > 0) {
-        await Promise.all(
-          escrows.map(async (user: any) => {
-            let newImage = "";
-            if (user.profile) {
-              const s3 = this.configService.get("s3");
-              const bucketName = this.configService.get("aws_s3_bucket_name");
-              newImage = s3.getSignedUrl("getObject", {
-                Bucket: bucketName,
-                Key: user.profile ? user.profile : "",
-                Expires: 600000,
-              });
+  //     if (escrows.length > 0) {
+  //       await Promise.all(
+  //         escrows.map(async (user: any) => {
+  //           let newImage = "";
+  //           if (user.profile) {
+  //             const s3 = this.configService.get("s3");
+  //             const bucketName = this.configService.get("aws_s3_bucket_name");
+  //             newImage = s3.getSignedUrl("getObject", {
+  //               Bucket: bucketName,
+  //               Key: user.profile ? user.profile : "",
+  //               Expires: 600000,
+  //             });
 
-              (user.newImage = newImage ? newImage : null),
-                (user.fname_alias = user.fname_alias
-                  ? user.fname_alias
-                  : "John");
-              user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
-            }
-          })
-        );
+  //             (user.newImage = newImage ? newImage : null),
+  //               (user.fname_alias = user.fname_alias
+  //                 ? user.fname_alias
+  //                 : "John");
+  //             user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
+  //           }
+  //         })
+  //       );
 
-        return response.status(HttpStatus.OK).json({
-          status: "success",
-          data: escrows,
-          escrowsCount: escrowsCount,
-        });
-      } else {
-        return response.status(HttpStatus.OK).json({
-          message: "Escrow not found",
-          escrowsCount: 0
-        });
-      }
-    } catch (err) {
-      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
-    }
-  }
+  //       return response.status(HttpStatus.OK).json({
+  //         status: "success",
+  //         data: escrows,
+  //         escrowsCount: escrowsCount,
+  //       });
+  //     } else {
+  //       return response.status(HttpStatus.OK).json({
+  //         message: "Escrow not found",
+  //         escrowsCount: 0,
+  //         data: []
+  //       });
+  //     }
+  //   } catch (err) {
+  //     return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+  //   }
+  // }
 
   @Get("/getEscrowsById/:id")
   async getEscrowsById(
@@ -219,7 +261,31 @@ export class EscrowsController {
         errorMessage = "Description is missing";
       } else if (!reqData?.processTime) {
         errorMessage = "Process Time is missing";
+      } else if ((reqData?.object != 'Jewelery') || 
+      (reqData?.category != 'high_value_items') ||  
+      (reqData?.processTime != '24 Hours')
+      ) {
+        errorMessage = "Something went wrong";
+      } else if ((reqData?.priceType != 'fixed') && (reqData?.priceType != 'flexible')){
+        errorMessage = "Please add Fixed or Flexible Price.";
+      } else if ((reqData?.escrowType != 'seller') && (reqData?.escrowType != 'buyer')){
+        errorMessage = "Please select Buyer or Seller.";
+      } else if ((reqData?.priceType && reqData?.priceType == "fixed" && reqData?.price.match(numericRegex)) || 
+      (reqData?.priceType && reqData?.priceType == "flexible" && (reqData?.minPrice.match(numericRegex) || reqData?.maxPrice.match(numericRegex)))  
+      ) {
+        errorMessage = "Only numeric values accept";
+      } else if ((reqData?.priceType && reqData?.priceType == "fixed")) {
+        if((reqData?.minPrice && (reqData?.minPrice.match(numericRegex) || !reqData?.minPrice.match(numericRegex))) || 
+        (reqData?.maxPrice && (reqData?.maxPrice.match(numericRegex) || !reqData?.maxPrice.match(numericRegex)))){
+          errorMessage = "Only Fixed Price Accepted";
+        } 
+
+      } else if ((reqData?.priceType && reqData?.priceType == "flexible")){
+        if(reqData?.price && (reqData?.price.match(numericRegex) || !reqData?.price.match(numericRegex))){
+          errorMessage = "Only Flexible Minimum and Maxium Price Accepted";
+        } 
       }
+
       if (errorMessage) {
         return response
           .status(HttpStatus.BAD_REQUEST)

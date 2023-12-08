@@ -12,7 +12,6 @@ import {
   Query,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { SkipThrottle } from "@nestjs/throttler";
 import { EscrowService } from "src/service/escrow/escrows.service";
 import { UserService } from "src/service/user/users.service";
 var jwt = require("jsonwebtoken");
@@ -29,6 +28,7 @@ export class AuthController {
     private readonly userService: UserService,
     private readonly escrowService: EscrowService
   ) {}
+
   @Get("/nonce/:addressId")
   async generateToken(@Res() response, @Param() param: { addressId: string }) {
     try {
@@ -43,6 +43,7 @@ export class AuthController {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
+
   @Get("/getuser/:address")
   async getUserDetailByAddress(
     @Res() response,
@@ -119,7 +120,8 @@ export class AuthController {
       } else {
         return response.status(HttpStatus.OK).json({
           message: "Escrow not found",
-          escrowsCount: 0
+          escrowsCount: 0,
+          data: []
         });
       }
     } catch (err) {
@@ -127,4 +129,52 @@ export class AuthController {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
+
+  @Get("/getAllEscrows")
+  async getAllEscrows(@Req() req: any, @Res() response) {
+    try {
+      const page = req.query.page ? +req.query.page : 1;
+      const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
+      const escrows = await this.escrowService.fetchAllEscrows(page, pageSize);
+      const escrowsCount = await this.escrowService.getEscrowCount();
+
+      if (escrows.length > 0) {
+        await Promise.all(
+          escrows.map(async (user: any) => {
+            let newImage = "";
+            if (user.profile) {
+              const s3 = this.configService.get("s3");
+              const bucketName = this.configService.get("aws_s3_bucket_name");
+              newImage = s3.getSignedUrl("getObject", {
+                Bucket: bucketName,
+                Key: user.profile ? user.profile : "",
+                Expires: 600000,
+              });
+
+              (user.newImage = newImage ? newImage : null),
+                (user.fname_alias = user.fname_alias
+                  ? user.fname_alias
+                  : "John");
+              user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
+            }
+          })
+        );
+
+        return response.status(HttpStatus.OK).json({
+          status: "success",
+          data: escrows,
+          escrowsCount: escrowsCount,
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          message: "Escrow not found",
+          escrowsCount: 0,
+          data: []
+        });
+      }
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
 }

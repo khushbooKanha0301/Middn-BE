@@ -14,12 +14,14 @@ export class AuthenticateMiddleware implements NestMiddleware {
 		try {
 			const authHeader = req.headers['authorization']
 			const token = authHeader && authHeader.split(' ')[1]
+
 			if (token == null) {
 				// throw 'NotProvideToken'
 				// throw new HttpException('Authorization Token not found', HttpStatus.UNAUTHORIZED)
 			}
 			
 			const isExistingToken = await this.tokenService.getToken(token);
+ console.log("isExistingToken ", isExistingToken);
 			if (!isExistingToken && req.method !== "POST" && req.originalUrl !== "/login") {
 				return res.status(HttpStatus.UNAUTHORIZED).json({ message: "Authorization Token not valid."});
 			}
