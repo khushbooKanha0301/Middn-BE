@@ -11,9 +11,11 @@ import {
   Req,
   Query,
 } from "@nestjs/common";
+import axios from "axios";
 import { ConfigService } from "@nestjs/config";
 import { EscrowService } from "src/service/escrow/escrows.service";
 import { UserService } from "src/service/user/users.service";
+
 var jwt = require("jsonwebtoken");
 const getSignMessage = (address, nonce) => {
   return `Please sign this message for address ${address}:\n\n${nonce}`;
@@ -21,6 +23,7 @@ const getSignMessage = (address, nonce) => {
 const Web3 = require("web3");
 const jwtSecret = "lkjhh";
 const web3 = new Web3("https://cloudflare-eth.com/");
+
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -174,6 +177,71 @@ export class AuthController {
       }
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @Get("/getCryptoDetails")
+  async getCryptoDetails(
+    @Req() req: any,
+    @Res() response,
+    // @Body() body: { usdAmount: any; cryptoSymbol: any }
+  ) {
+    try {
+      let responseData = await axios.get(
+        `https://api.coingate.com/api/v2/currencies?kind=crypto`
+      );
+      console.log("---------------", );
+      if (responseData) {
+        return response.json({ 
+          message: `Crypto get successfully`,
+          data: responseData.data 
+        });
+       
+      } else {
+        return response.json({ 
+          message: "Something went wrong",
+        });
+      }
+    } catch (err) {
+      return response.status(err.status).json(err.response);
+    }
+  }
+
+  @Post("/getCryptoAmountDetails")
+  async getCryptoAmountDetails(
+    @Req() req: any,
+    @Res() response,
+    @Body() body: { usdAmount: any; cryptoSymbol: any , cryptoCountry: any}
+  ) {
+    try {
+      if (!req.body.cryptoSymbol) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "Please select crypto currency",
+        });
+      } else {
+        let cryptoAmount = null;
+        if (req.body.cryptoSymbol == "USD") {
+          cryptoAmount = body.usdAmount * 0.49;
+        } else {
+          let responseData = await axios.get(
+            `https://api.coingate.com/v2/rates/merchant/${req.body.cryptoSymbol}/${req.body.cryptoCountry}`
+          );
+          let amountUSD = body.usdAmount * responseData.data;
+          cryptoAmount = amountUSD * 0.49;
+        }
+        if (cryptoAmount) {
+          return response.status(HttpStatus.OK).json({
+            message: `${req.body.cryptoSymbol}: ${req.body.usdAmount} => MID: ${cryptoAmount}`,
+            amount: cryptoAmount,
+          });
+        } else {
+          return response.status(HttpStatus.OK).json({
+            message: "Something went wrong",
+          });
+        }
+      }
+    } catch (err) {
+      return response.status(err.status).json(err.response);
     }
   }
 
