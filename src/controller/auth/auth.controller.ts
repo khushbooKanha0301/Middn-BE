@@ -15,7 +15,7 @@ import axios from "axios";
 import { ConfigService } from "@nestjs/config";
 import { EscrowService } from "src/service/escrow/escrows.service";
 import { UserService } from "src/service/user/users.service";
-
+import { SkipThrottle } from "@nestjs/throttler";
 var jwt = require("jsonwebtoken");
 const getSignMessage = (address, nonce) => {
   return `Please sign this message for address ${address}:\n\n${nonce}`;
@@ -24,6 +24,7 @@ const Web3 = require("web3");
 const jwtSecret = "lkjhh";
 const web3 = new Web3("https://cloudflare-eth.com/");
 
+@SkipThrottle()
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -50,7 +51,7 @@ export class AuthController {
   @Get("/getuser/:address")
   async getUserDetailByAddress(
     @Res() response,
-    @Param("address") address: string
+    @Param("address") address: string 
   ) {
     try {
       let user = await this.userService.getOnlyUserBioByAddress(address);

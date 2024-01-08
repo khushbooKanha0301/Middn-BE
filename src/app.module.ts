@@ -4,6 +4,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { UsersController } from "./controller/user/users.controller";
 import { AuthController } from "./controller/auth/auth.controller";
+import { TradeController } from "./controller/trade/trade.controller";
 import { UserSchema } from "./schema/user.schema";
 import { UserService } from "./service/user/users.service";
 import { AuthenticateMiddleware } from "./middleware/authenticate.middleware";
@@ -13,7 +14,9 @@ import { MessageService } from "./service/message/message.service";
 import configuration from "./config/configuration";
 import { MessageSchema } from "./schema/message.schema";
 import { TokenService } from "./service/token/token.service";
+import { TradeService } from "./service/trade/trade.service";
 import { TokenSchema } from "./schema/token.schema";
+import { TradeSchema } from "./schema/trade.schema";
 import { LoginHistorySchema } from "./schema/loginHistory.schema";
 import { EscrowSchema } from "./schema/escrow.schema";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
@@ -31,6 +34,7 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
     MongooseModule.forFeature([{ name: "user", schema: UserSchema }]),
     MongooseModule.forFeature([{ name: "message", schema: MessageSchema }]),
     MongooseModule.forFeature([{ name: "token", schema: TokenSchema }]),
+    MongooseModule.forFeature([{ name: "trade", schema: TradeSchema }]),
     MongooseModule.forFeature([
       { name: "login_history", schema: LoginHistorySchema },
     ]),
@@ -53,6 +57,7 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
     AuthController,
     MessagesController,
     EscrowsController,
+    TradeController
   ],
   providers: [
     AppService,
@@ -62,6 +67,7 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
     EscrowService,
     LoginHistoryService,
     ReportUserService,
+    TradeService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

@@ -1268,6 +1268,20 @@ export class UsersController {
     }
   }
 
+  @Get("/getUserByAddress/:address")
+  async getUserByAddress(@Req() req: any, @Res() response,  @Param("address") address: string) {
+    try {
+      let userDetails = await this.userService.getFindbyAddress(
+        address
+      );
+      return response.status(HttpStatus.OK).json({
+        data: userDetails,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
   @Get("/secret")
   async secret(@Req() req, @Res() response) {
     try {
