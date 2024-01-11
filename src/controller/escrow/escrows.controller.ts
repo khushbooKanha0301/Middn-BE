@@ -196,30 +196,38 @@ export class EscrowsController {
   ) {
     try {
       let getEscrow = await this.escrowService.getDataById(id);
+      let newImage = "";
       if (!getEscrow) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
-      let newImage = "";
-      if (getEscrow.profile) {
-        const s3 = this.configService.get("s3");
-        const bucketName = this.configService.get("aws_s3_bucket_name");
-        newImage = await s3.getSignedUrl("getObject", {
-          Bucket: bucketName,
-          Key: getEscrow.profile ? getEscrow.profile : "",
-          Expires: 604800,
+      if (req.headers.authData.verifiedAddress === getEscrow.user_address) {
+        if (getEscrow.profile) {
+          const s3 = this.configService.get("s3");
+          const bucketName = this.configService.get("aws_s3_bucket_name");
+          newImage = await s3.getSignedUrl("getObject", {
+            Bucket: bucketName,
+            Key: getEscrow.profile ? getEscrow.profile : "",
+            Expires: 604800,
+          });
+        }
+        getEscrow.newImage = newImage ? newImage : null;
+        getEscrow.fname_alias = getEscrow.fname_alias
+          ? getEscrow.fname_alias
+          : "John";
+        getEscrow.lname_alias = getEscrow.lname_alias
+          ? getEscrow.lname_alias
+          : "Doe";
+
+        return response.status(HttpStatus.OK).json({
+          status: "success",
+          data: getEscrow,
         });
+      } else {
+        return response
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ status: "failure" });
       }
-      getEscrow.newImage = newImage ? newImage : null;
-      getEscrow.fname_alias = getEscrow.fname_alias
-        ? getEscrow.fname_alias
-        : "John";
-      getEscrow.lname_alias = getEscrow.lname_alias
-        ? getEscrow.lname_alias
-        : "Doe";
-      return response.status(HttpStatus.OK).json({
-        status: "success",
-        data: getEscrow,
-      });
+
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }

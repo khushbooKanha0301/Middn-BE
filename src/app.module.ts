@@ -30,7 +30,7 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
 
 @Module({
   imports: [
-    MongooseModule.forRoot("mongodb://127.0.0.1:27017/middn"),
+    MongooseModule.forRoot("mongodb://127.0.0.1:27017/middn-old"),
     MongooseModule.forFeature([{ name: "user", schema: UserSchema }]),
     MongooseModule.forFeature([{ name: "message", schema: MessageSchema }]),
     MongooseModule.forFeature([{ name: "token", schema: TokenSchema }]),
