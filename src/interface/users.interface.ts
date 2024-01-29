@@ -21,4 +21,9 @@ export interface IUser extends Document{
     readonly is_2FA_login_verified: boolean;
     readonly last_login_at: string;
     readonly joined_at: string;
+    readonly is_verified: number;
+    readonly kyc_completed: boolean;
+    readonly is_banned : boolean;
+    readonly email_verified : number;
+    readonly phone_verified : number;
 }

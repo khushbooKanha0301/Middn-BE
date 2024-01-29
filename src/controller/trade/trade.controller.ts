@@ -13,17 +13,17 @@ export class TradeController {
   async createTrade(@Res() response, @Body() createTradeDto: CreateTradeDto) {
     try {
       const newTrade = await this.tradeService.createTrade(createTradeDto);
-      let responseData = await axios.get(
-        `https://api.coingate.com/v2/rates/merchant/${createTradeDto.crypto_currency}/${createTradeDto.country_currency}`
-      );
-      let amountUSD = Number(createTradeDto.amount) * responseData.data;
-      let cryptoAmount = amountUSD * 0.49;
-      if(cryptoAmount != createTradeDto?.conversation_amount)
-      {
-        return response.status(HttpStatus.BAD_REQUEST).json({
-          message: "Something Went Wrong.",
-        });
-      }
+      // let responseData = await axios.get(
+      //   `https://api.coingate.com/v2/rates/merchant/${createTradeDto.crypto_currency}/${createTradeDto.country_currency}`
+      // );
+      // let amountUSD = Number(createTradeDto.amount) * responseData.data;
+      // let cryptoAmount = amountUSD * 0.49;
+      // if(cryptoAmount != createTradeDto?.conversation_amount)
+      // {
+      //   return response.status(HttpStatus.BAD_REQUEST).json({
+      //     message: "Something Went Wrong.",
+      //   });
+      // }
 
       return response.status(HttpStatus.CREATED).json({
         message: "Trade has been created successfully",

@@ -33,4 +33,12 @@ export class UpdateAccountSettingsDto {
 	@IsString()
 	location: string;
 
+	@IsOptional()
+	@IsNumber()
+	email_verified: number;
+
+	@IsOptional()
+	@IsNumber()
+	phone_verified: number;
+
 }

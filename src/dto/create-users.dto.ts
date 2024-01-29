@@ -78,4 +78,13 @@ export class CreateUserDto {
 	@IsOptional()
 	@IsString()
 	joined_at: string;
+
+	@IsOptional()
+	is_banned: boolean;
+
+	@IsOptional()
+	email_verified: number;
+
+	@IsOptional()
+	phone_verified: number;
 }

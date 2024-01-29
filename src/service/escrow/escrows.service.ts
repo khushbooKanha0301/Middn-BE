@@ -335,4 +335,19 @@ export class EscrowService {
       throw error;
     }
   }
+
+  async getEscrowsByUser(
+    address?: string
+  ): Promise<any> {
+    try {
+      let escrowsQuery = this.escrowModel.find({
+        user_address: address
+      });
+      return escrowsQuery;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
 }

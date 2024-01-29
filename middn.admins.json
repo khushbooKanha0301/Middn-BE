@@ -1,0 +1,24 @@
+[{
+  "_id": {
+    "$oid": "64f08cf4367a3037500812f5"
+  },
+  "fname": "Administrator",
+  "lname": "Administrator",
+  "otp": null,
+  "password": "$2b$10$MyMyU7haG/ml4mpQ.70jjuAZRRi23QNsa4FE.kkpSEPGJ/zF8ATiu",
+  "username": "administrator@middn.com",
+  "role_id": 1,
+  "role_name": "administrator"
+},
+{
+  "_id": {
+    "$oid": "65a0ec0f29ee3db0d1b733a0"
+  },
+  "fname": "moderator",
+  "lname": "moderator",
+  "otp": null,
+  "password": "$2b$10$MyMyU7haG/ml4mpQ.70jjuAZRRi23QNsa4FE.kkpSEPGJ/zF8ATiu",
+  "username": "moderator@middn.com",
+  "role_id": 2,
+  "role_name": "moderator"
+}]

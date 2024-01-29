@@ -12,19 +12,19 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles
 } from "@nestjs/common";
 import { CreateUserDto } from "src/dto/create-users.dto";
 import { UpdateUserProfileDto } from "src/dto/update-users-profile.dto";
 import { UserService } from "src/service/user/users.service";
 import { TokenService } from "src/service/token/token.service";
 import { MessageService } from "../../service/message/message.service";
-import { FileInterceptor } from "@nestjs/platform-express";
 import { Express } from "express";
 import { Model } from "mongoose";
 import { ConfigService } from "@nestjs/config";
 import { UpdateAccountSettingsDto } from "src/dto/update-account-settings.dto";
 import { IMessage } from "src/interface/messages.interface";
-import { Injectable } from "@nestjs/common";
+import { AnyFilesInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { InjectModel } from "@nestjs/mongoose";
 import { SkipThrottle } from "@nestjs/throttler";
 import { LoginHistoryService } from "src/service/login-history/login-history.service";
@@ -32,7 +32,7 @@ const rp = require("request-promise-native");
 const speakeasy = require("speakeasy");
 const moment = require("moment");
 import * as geoip from "geoip-lite";
-import axios from "axios";
+import { UpdateKycDataDto } from "src/dto/update-kyc.dto";
 import { ReportUserService } from "src/service/report-users/reportUser.service";
 
 var jwt = require("jsonwebtoken");
@@ -40,8 +40,9 @@ const getSignMessage = (address, nonce) => {
   return `Please sign this message for address ${address}:\n\n${nonce}`;
 };
 const Web3 = require("web3");
-
 const web3 = new Web3("https://cloudflare-eth.com/");
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 @SkipThrottle()
 @Controller("users")
 export class UsersController {
@@ -123,6 +124,12 @@ export class UsersController {
 
       if (verifiedAddress.toLowerCase() == address.toLowerCase()) {
         let addressByUser = await this.userService.getFindbyAddress(address);
+ 
+        if (addressByUser?.is_banned === true) {
+          return response
+            .status(HttpStatus.BAD_REQUEST)
+            .json({ message: "Can't Login, You are Blocked by Admin." });
+        }
         let userInfo;
         const token = await jwt.sign({ verifiedAddress, nonce }, jwtSecret, {
           expiresIn: "1w",
@@ -324,16 +331,7 @@ export class UsersController {
           message: "Last Name is missing.",
         });
       }
-      if (!updateAccountSettingDto.email) {
-        return response.status(HttpStatus.BAD_REQUEST).json({
-          message: "Email is missing.",
-        });
-      }
-      if (!updateAccountSettingDto.phone) {
-        return response.status(HttpStatus.BAD_REQUEST).json({
-          message: "Phone number is missing.",
-        });
-      }
+
       if (!updateAccountSettingDto.phoneCountry) {
         return response.status(HttpStatus.BAD_REQUEST).json({
           message: "Country code is missing.",
@@ -366,15 +364,7 @@ export class UsersController {
       ) {
         delete updateAccountSettingDto.location;
       }
-      if (
-        updateAccountSettingDto.phone &&
-        !updateAccountSettingDto.phone.match("^[0-9]{5,10}$")
-      ) {
-        return response.status(HttpStatus.BAD_REQUEST).json({
-          message: "Invalid Phone.",
-        });
-      }
-
+      
       const countries = [
         "AF",
         "AL",
@@ -626,6 +616,11 @@ export class UsersController {
         });
       }
 
+      if (!updateAccountSettingDto.email) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "Email is missing.",
+        });
+      }
       let validRegex =
         /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
       if (
@@ -636,6 +631,47 @@ export class UsersController {
           message: "Invalid E-mail address.",
         });
       }
+
+      if (updateAccountSettingDto.email) {
+        let userEmail = await this.userService.getFindbyEmail(
+          UserId,
+          updateAccountSettingDto.email
+        );
+        console.log("userEmail ", userEmail);
+        if (userEmail.length) {
+          return response.status(HttpStatus.BAD_REQUEST).json({
+            message: "Email already Exist.",
+          });
+        } 
+      }
+
+      if (!updateAccountSettingDto.phone) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "Phone number is missing.",
+        });
+      }
+      if (
+        updateAccountSettingDto.phone &&
+        !updateAccountSettingDto.phone.match("^[0-9]{5,10}$")
+      ) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "Invalid Phone.",
+        });
+      }
+      
+      if (updateAccountSettingDto.phone) {
+        let userPhone = await this.userService.getFindbyPhone(
+          UserId,
+          updateAccountSettingDto.phone
+        );
+        
+        if (userPhone.length) {
+          return response.status(HttpStatus.BAD_REQUEST).json({
+            message: "Phone already Exist.",
+          });
+        } 
+      }
+
 
       const countryCode = [
         "+93",
@@ -1131,7 +1167,8 @@ export class UsersController {
           message: "Invalid currency.",
         });
       }
-
+      updateAccountSettingDto.email_verified = 0;
+      updateAccountSettingDto.phone_verified = 0;
       await this.userService.updateAccountSettings(
         UserId,
         updateAccountSettingDto
@@ -1524,4 +1561,195 @@ export class UsersController {
       return res.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
+
+  @SkipThrottle(false)
+  @Put("/updateKyc")
+  @UseInterceptors(AnyFilesInterceptor())
+  async updateKyc(
+    @Res() response,
+    @Body() updateKycDto: UpdateKycDataDto,
+    @Req() req: any,
+    @UploadedFiles() files?: Array<Express.Multer.File>
+  ) {
+    try {
+      let reqError = null;
+      
+      updateKycDto.fname = updateKycDto.fname.trim();
+      updateKycDto.lname = updateKycDto.lname.trim();
+      updateKycDto.res_address = updateKycDto.res_address.trim();
+      updateKycDto.postal_code = updateKycDto.postal_code.trim();
+      updateKycDto.city = updateKycDto.city.trim();
+
+      if (!updateKycDto.fname) {
+        reqError = "First name is missing";
+      } else if (!updateKycDto.lname) {
+        reqError = "Last name is missing";
+      } else if (!updateKycDto.res_address) {
+        reqError = "Residential address is missing";
+      } else if (!updateKycDto.city) {
+        reqError = "City is missing";
+      } else if (!updateKycDto.postal_code) {
+        reqError = "Postal code is missing";
+      } else if (!updateKycDto.country_of_issue) {
+        reqError = "Country of issue is missing";
+      } else if (!updateKycDto.verified_with) {
+        reqError = "Verified with is missing";
+      } else if (!updateKycDto.dob) {
+        reqError = "Date of Birth is missing";
+      }
+      if (!files || files.length < 2) {
+        reqError = "Files are missing";
+      } else {
+        let userPhotoExists = false;
+        let passportPhotoExists = false;
+
+        for (let i = 0; i < files.length; i++) {
+          if (files[i]["fieldname"] === "user_photo_url") {
+            userPhotoExists = true;
+          }
+          if (files[i]["fieldname"] === "passport_url") {
+            passportPhotoExists = true;
+          }
+        }
+        if (!userPhotoExists) {
+          reqError = "User photo is missing";
+        }
+        if (!passportPhotoExists) {
+          reqError = "Passport photo is missing";
+        }
+      }
+      const pattern = /^[a-zA-Z0-9]*$/;
+      if(!updateKycDto.postal_code.match(pattern))
+      {
+        reqError = "Postal code not valid";
+      }
+      if (reqError) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: reqError,
+        });
+      }
+      let userDetails = await this.userService.getFindbyAddress(
+        req.headers.authData.verifiedAddress
+      );
+      if (userDetails.kyc_completed === true && userDetails.is_verified !== 2) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "KYC is already submitted.",
+        });
+      }
+      let passport_url = {};
+      let user_photo_url = {};
+      if (files) {
+        files?.map((file) => {
+          if (file.fieldname === "passport_url") {
+            passport_url = file;
+          }
+          if (file.fieldname === "user_photo_url") {
+            user_photo_url = file;
+          }
+        });
+      }
+      const UserId = userDetails._id.toString();
+      if (
+        userDetails.fname &&
+        (userDetails.fname != "" || userDetails.fname != null)
+      ) {
+        delete updateKycDto.fname;
+      }
+      if (
+        userDetails.lname &&
+        (userDetails.lname != "" || userDetails.lname != null)
+      ) {
+        delete updateKycDto.lname;
+      }
+      if (
+        userDetails.mname &&
+        (userDetails.mname != "" || userDetails.mname != null)
+      ) {
+        delete updateKycDto.mname;
+      }
+      if (
+        userDetails.dob &&
+        (userDetails.dob != "" || userDetails.dob != null)
+      ) {
+        delete updateKycDto.dob;
+      }
+      if (updateKycDto.is_verified) {
+        delete updateKycDto.is_verified;
+      }
+      if (updateKycDto.wallet_address) {
+        delete updateKycDto.wallet_address;
+      }
+      if (
+        userDetails.city &&
+        (userDetails.city != "" || userDetails.city != null)
+      ) {
+        delete updateKycDto.city;
+      }
+
+      if (updateKycDto.dob) {
+        if (!moment(updateKycDto.dob, "DD/MM/YYYY", true).isValid()) {
+          return response.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid Date Of Birth.",
+          });
+        }
+
+        const currentDate = moment();
+        const parsedGivenDate = moment(updateKycDto.dob, "DD/MM/YYYY");
+        if (parsedGivenDate.isAfter(currentDate)) {
+          return response.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid Date Of Birth.",
+          });
+        }
+      }
+
+      const data = await this.userService.updateKyc(
+        UserId,
+        updateKycDto,
+        passport_url,
+        user_photo_url
+      );
+      return response.status(HttpStatus.OK).json({
+        message: "Users has been successfully updated.",
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @Post("/validate-file-type")
+  @UseInterceptors(AnyFilesInterceptor())
+  async validateFileType(
+    @Res() response,
+    @UploadedFiles() file: Express.Multer.File
+  ) {
+    try {
+      // Array of allowed files
+      const array_of_allowed_files = ["jpg", "jpeg", "png"];
+      // Allowed file size in mb
+      const allowed_file_size = 5;
+      // Get the extension of the uploaded file
+      if (file) {
+        const file_extension = file[0].originalname.slice(
+          ((file[0].originalname.lastIndexOf(".") - 1) >>> 0) + 2
+        );
+        // Check if the uploaded file is allowed
+        if (!array_of_allowed_files.includes(file_extension)) {
+          return response
+            .status(HttpStatus.BAD_REQUEST)
+            .json({ message: "Please upload Valid Image" });
+        }
+        if (file[0].size / (1024 * 1024) > allowed_file_size || file[0].size < 10240) {
+          return response
+            .status(HttpStatus.BAD_REQUEST)
+            .json({ message: "File size should come between 10 KB to 5120 KB" });
+        }
+        return response
+          .status(HttpStatus.OK)
+          .json({ message: "File uploaded successfully." });
+      }
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+  
 }

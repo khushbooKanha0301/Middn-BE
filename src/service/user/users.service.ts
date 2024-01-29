@@ -6,6 +6,8 @@ import { Model } from "mongoose";
 import { UpdateUserProfileDto } from "src/dto/update-users-profile.dto";
 import { ConfigService } from "@nestjs/config";
 import { UpdateAccountSettingsDto } from "src/dto/update-account-settings.dto";
+import { UpdateKycDataDto } from "src/dto/update-kyc.dto";
+const moment = require('moment');
 
 @Injectable()
 export class UserService {
@@ -121,4 +123,97 @@ export class UserService {
     }
     return existingUser;
   }
+
+  async updateKyc(
+    userId: string,
+    UpdateKycDto: UpdateKycDataDto,
+    passport_url: any = null,
+    user_photo_url: any = null
+  ): Promise<any> {
+    let passport_url_key = null;
+    if (!!passport_url && !!passport_url.buffer) {
+      const s3 = this.configService.get("s3");
+      const bucketName = this.configService.get("aws_s3_bucket_name");
+      passport_url_key = new Date().valueOf() + "_" + passport_url.originalname;
+
+      const params = {
+        Bucket: bucketName,
+        Key: passport_url_key,
+        Body: passport_url.buffer,
+      };
+
+      await new Promise(async (resolve, reject) => {
+        await s3.upload(params, async function (err, data) {
+          if (!err) {
+            return resolve(true);
+          } else {
+            return reject(false);
+          }
+        });
+      });
+    }
+    let user_photo_url_key = null;
+    if (!!user_photo_url && !!user_photo_url.buffer) {
+      const s3 = this.configService.get("s3");
+      const bucketName = this.configService.get("aws_s3_bucket_name");
+      user_photo_url_key =
+        new Date().valueOf() + "_" + user_photo_url.originalname;
+
+      const params = {
+        Bucket: bucketName,
+        Key: user_photo_url_key,
+        Body: user_photo_url.buffer,
+      };
+
+      await new Promise(async (resolve, reject) => {
+        await s3.upload(params, async function (err, data) {
+          if (!err) {
+            return resolve(true);
+          } else {
+            return reject(false);
+          }
+        });
+      });
+    }
+    var currentDate = moment.utc().format();
+
+    const updateObject = {
+      ...UpdateKycDto,
+      passport_url: passport_url_key,
+      user_photo_url: user_photo_url_key,
+      kyc_completed: true,
+      is_kyc_deleted: false,
+      is_verified: 0,
+      status: "Active",
+      kyc_submitted_date:currentDate,
+      admin_checked_at:""
+    };
+
+    const existingUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      { ...updateObject },
+      { new: true }
+    );
+    if (!existingUser) {
+      throw new NotFoundException(`User #${userId} not found`);
+    }
+    return existingUser;
+  }
+  async getFindbyEmail(_id: string, email: string): Promise<any>{
+    const existingUser = await this.userModel
+    .findOne({ $and: [{ _id }, { email }] })
+    .select("-_id email")
+    .exec();
+  
+    return existingUser;
+  }
+  async getFindbyPhone(_id: string, phone: string): Promise<any>{
+    const existingUser = await this.userModel
+    .findOne({ $and: [{ _id }, { phone }] })
+    .select("-_id phone")
+    .exec();
+  
+    return existingUser;
+  }
+
 }

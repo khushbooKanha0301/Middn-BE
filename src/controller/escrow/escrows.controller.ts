@@ -141,53 +141,6 @@ export class EscrowsController {
     }
   }
 
-  // @Get("/getAllEscrows")
-  // async getAllEscrows(@Req() req: any, @Res() response) {
-  //   try {
-  //     const page = req.query.page ? +req.query.page : 1;
-  //     const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
-  //     const escrows = await this.escrowService.fetchAllEscrows(page, pageSize);
-  //     const escrowsCount = await this.escrowService.getEscrowCount();
-
-  //     if (escrows.length > 0) {
-  //       await Promise.all(
-  //         escrows.map(async (user: any) => {
-  //           let newImage = "";
-  //           if (user.profile) {
-  //             const s3 = this.configService.get("s3");
-  //             const bucketName = this.configService.get("aws_s3_bucket_name");
-  //             newImage = s3.getSignedUrl("getObject", {
-  //               Bucket: bucketName,
-  //               Key: user.profile ? user.profile : "",
-  //               Expires: 600000,
-  //             });
-
-  //             (user.newImage = newImage ? newImage : null),
-  //               (user.fname_alias = user.fname_alias
-  //                 ? user.fname_alias
-  //                 : "John");
-  //             user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
-  //           }
-  //         })
-  //       );
-
-  //       return response.status(HttpStatus.OK).json({
-  //         status: "success",
-  //         data: escrows,
-  //         escrowsCount: escrowsCount,
-  //       });
-  //     } else {
-  //       return response.status(HttpStatus.OK).json({
-  //         message: "Escrow not found",
-  //         escrowsCount: 0,
-  //         data: []
-  //       });
-  //     }
-  //   } catch (err) {
-  //     return response.status(HttpStatus.BAD_REQUEST).json(err.response);
-  //   }
-  // }
-
   @Get("/getEscrowsById/:id")
   async getEscrowsById(
     @Req() req: any,
@@ -200,33 +153,35 @@ export class EscrowsController {
       if (!getEscrow) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
-      if (req.headers.authData.verifiedAddress === getEscrow.user_address) {
-        if (getEscrow.profile) {
-          const s3 = this.configService.get("s3");
-          const bucketName = this.configService.get("aws_s3_bucket_name");
-          newImage = await s3.getSignedUrl("getObject", {
-            Bucket: bucketName,
-            Key: getEscrow.profile ? getEscrow.profile : "",
-            Expires: 604800,
-          });
-        }
-        getEscrow.newImage = newImage ? newImage : null;
-        getEscrow.fname_alias = getEscrow.fname_alias
-          ? getEscrow.fname_alias
-          : "John";
-        getEscrow.lname_alias = getEscrow.lname_alias
-          ? getEscrow.lname_alias
-          : "Doe";
+      // if (req.headers.authData.verifiedAddress === getEscrow.user_address) {
+       
+      // } else {
+      //   return response
+      //   .status(HttpStatus.BAD_REQUEST)
+      //   .json({ status: "failure" });
+      // }
 
-        return response.status(HttpStatus.OK).json({
-          status: "success",
-          data: getEscrow,
+      if (getEscrow.profile) {
+        const s3 = this.configService.get("s3");
+        const bucketName = this.configService.get("aws_s3_bucket_name");
+        newImage = await s3.getSignedUrl("getObject", {
+          Bucket: bucketName,
+          Key: getEscrow.profile ? getEscrow.profile : "",
+          Expires: 604800,
         });
-      } else {
-        return response
-        .status(HttpStatus.BAD_REQUEST)
-        .json({ status: "failure" });
       }
+      getEscrow.newImage = newImage ? newImage : null;
+      getEscrow.fname_alias = getEscrow.fname_alias
+        ? getEscrow.fname_alias
+        : "John";
+      getEscrow.lname_alias = getEscrow.lname_alias
+        ? getEscrow.lname_alias
+        : "Doe";
+
+      return response.status(HttpStatus.OK).json({
+        status: "success",
+        data: getEscrow,
+      });
 
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
@@ -344,5 +299,32 @@ export class EscrowsController {
         message: "Escrow deleted successfully...",
       });
     } catch (error) {}
+  }
+
+  @SkipThrottle(false)
+  @Get("/getEscrowsByUser/:address")
+  async activeEscrows(
+    @Req() req: any,
+    @Res() response,
+    @Param("address") address: string
+  ) {
+    try {
+      const escrows = await this.escrowService.getEscrowsByUser(address);
+
+      if (escrows.length > 0) {
+        return response.status(HttpStatus.OK).json({
+          status: "Escrow fetched successfully",
+          data: escrows,
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          message: "Escrow not found",
+          data: []
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
   }
 }

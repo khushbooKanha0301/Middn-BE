@@ -45,5 +45,15 @@ export class User {
 	last_login_at:string;
 	@Prop()
 	joined_at:string;
+	@Prop({ default: false })
+	is_banned:boolean;
+	@Prop({ default: 0 })
+	is_verified: number;
+	@Prop({ default: false })
+	kyc_completed: boolean;
+	@Prop()
+	email_verified: number;
+	@Prop()
+	phone_verified: number;
 }	
 export const UserSchema = SchemaFactory.createForClass(User);
