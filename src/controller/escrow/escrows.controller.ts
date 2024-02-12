@@ -91,12 +91,23 @@ export class EscrowsController {
       ) {
         errorMessage = "Only numeric values accept";
       }
+      else if ((reqData?.priceType && reqData?.priceType == "fixed" && reqData?.price <= 0)  
+      ) {
+        errorMessage = "Please add price greater than 0";
+      }
+      else if (reqData?.priceType && reqData?.priceType == "flexible" && ((reqData?.minPrice < 5)) 
+      ) {
+        errorMessage = "Please add Minimum price greater than 5";
+      }
+      else if (reqData?.priceType && reqData?.priceType == "flexible" && ((reqData?.maxPrice > 100000)) 
+      ) {
+        errorMessage = "Please add Maxmimum price lesser than 100000 ";
+      }
       else if ((reqData?.priceType && reqData?.priceType == "fixed")) {
         if((reqData?.minPrice && (reqData?.minPrice.match(numericRegex) || !reqData?.minPrice.match(numericRegex))) || 
         (reqData?.maxPrice && (reqData?.maxPrice.match(numericRegex) || !reqData?.maxPrice.match(numericRegex)))){
           errorMessage = "Only Fixed Price Accepted";
         } 
-
       }
       else if ((reqData?.priceType && reqData?.priceType == "flexible")){
         if(reqData?.price && (reqData?.price.match(numericRegex) || !reqData?.price.match(numericRegex))){
@@ -153,13 +164,6 @@ export class EscrowsController {
       if (!getEscrow) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
-      // if (req.headers.authData.verifiedAddress === getEscrow.user_address) {
-       
-      // } else {
-      //   return response
-      //   .status(HttpStatus.BAD_REQUEST)
-      //   .json({ status: "failure" });
-      // }
 
       if (getEscrow.profile) {
         const s3 = this.configService.get("s3");
@@ -237,7 +241,20 @@ export class EscrowsController {
       (reqData?.priceType && reqData?.priceType == "flexible" && (reqData?.minPrice.match(numericRegex) || reqData?.maxPrice.match(numericRegex)))  
       ) {
         errorMessage = "Only numeric values accept";
-      } else if ((reqData?.priceType && reqData?.priceType == "fixed")) {
+      }
+      else if ((reqData?.priceType && reqData?.priceType == "fixed" && reqData?.price <= 0)  
+      ) {
+        errorMessage = "Please add price greater than 0";
+      }
+      else if (reqData?.priceType && reqData?.priceType == "flexible" && ((reqData?.minPrice < 5)) 
+      ) {
+        errorMessage = "Please add Minimum price greater than 5";
+      }
+      else if (reqData?.priceType && reqData?.priceType == "flexible" && ((reqData?.maxPrice > 100000)) 
+      ) {
+        errorMessage = "Please add Maxmimum price lesser than 100000 ";
+      }  
+      else if ((reqData?.priceType && reqData?.priceType == "fixed")) {
         if((reqData?.minPrice && (reqData?.minPrice.match(numericRegex) || !reqData?.minPrice.match(numericRegex))) || 
         (reqData?.maxPrice && (reqData?.maxPrice.match(numericRegex) || !reqData?.maxPrice.match(numericRegex)))){
           errorMessage = "Only Fixed Price Accepted";

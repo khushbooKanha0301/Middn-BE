@@ -141,7 +141,6 @@ export class UserService {
         Key: passport_url_key,
         Body: passport_url.buffer,
       };
-
       await new Promise(async (resolve, reject) => {
         await s3.upload(params, async function (err, data) {
           if (!err) {
@@ -164,10 +163,11 @@ export class UserService {
         Key: user_photo_url_key,
         Body: user_photo_url.buffer,
       };
-
+      console.log("params----", params)
       await new Promise(async (resolve, reject) => {
         await s3.upload(params, async function (err, data) {
           if (!err) {
+            console.log("resolve")
             return resolve(true);
           } else {
             return reject(false);
@@ -189,31 +189,38 @@ export class UserService {
       admin_checked_at:""
     };
 
+    console.log("updateObject", updateObject)
     const existingUser = await this.userModel.findByIdAndUpdate(
       userId,
       { ...updateObject },
       { new: true }
     );
+    console.log("existingUser ", existingUser);
     if (!existingUser) {
       throw new NotFoundException(`User #${userId} not found`);
     }
     return existingUser;
   }
+
   async getFindbyEmail(_id: string, email: string): Promise<any>{
     const existingUser = await this.userModel
     .findOne({ $and: [{ _id }, { email }] })
     .select("-_id email")
     .exec();
-  
-    return existingUser;
+    if(existingUser){
+      return existingUser
+    }
+    return [];
   }
   async getFindbyPhone(_id: string, phone: string): Promise<any>{
     const existingUser = await this.userModel
     .findOne({ $and: [{ _id }, { phone }] })
     .select("-_id phone")
     .exec();
-  
-    return existingUser;
+    if(existingUser){
+      return existingUser
+    }
+    return [];
   }
 
 }

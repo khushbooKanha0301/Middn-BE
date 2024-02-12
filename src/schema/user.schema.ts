@@ -51,9 +51,17 @@ export class User {
 	is_verified: number;
 	@Prop({ default: false })
 	kyc_completed: boolean;
-	@Prop()
+	@Prop({ default: 0 })
 	email_verified: number;
-	@Prop()
+	@Prop({ default: 0 })
 	phone_verified: number;
+	@Prop()
+	passport_url: string;
+	@Prop()
+	user_photo_url: string;
+	@Prop()
+	kyc_submitted_date: string;
+	@Prop()
+	admin_checked_at: string;
 }	
 export const UserSchema = SchemaFactory.createForClass(User);

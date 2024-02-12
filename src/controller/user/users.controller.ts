@@ -203,7 +203,8 @@ export class UsersController {
     }
   }
 
-  @Post()
+  @SkipThrottle(false)
+  @Post("/createUsers")
   async createUsers(@Res() response, @Body() createUserDto: CreateUserDto) {
     try {
       const newUser = await this.userService.createUser(createUserDto);

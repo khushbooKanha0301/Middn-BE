@@ -87,4 +87,16 @@ export class CreateUserDto {
 
 	@IsOptional()
 	phone_verified: number;
+
+	@IsOptional()
+	passport_url: string;
+
+	@IsOptional()
+	user_photo_url: string;
+
+	@IsOptional()
+	admin_checked_at: string;
+	
+	@IsOptional()
+	kyc_submitted_date: string;
 }

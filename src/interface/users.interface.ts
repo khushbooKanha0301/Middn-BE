@@ -26,4 +26,6 @@ export interface IUser extends Document{
     readonly is_banned : boolean;
     readonly email_verified : number;
     readonly phone_verified : number;
+    readonly admin_checked_at: string;
+    readonly kyc_submitted_date: string;
 }
