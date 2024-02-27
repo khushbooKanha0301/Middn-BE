@@ -108,12 +108,17 @@ export class EscrowService {
     }
   }
 
-  async fetchAllEscrows(page?: number, pageSize?: number): Promise<any> {
+  async fetchAllEscrows(page?: number, pageSize?: number, userAddress? :string ,  statusFilter?: any): Promise<any> {
     try {
       let escrowsQuery = this.escrowModel.aggregate([
         {
           $match: {
             is_deleted: false,
+            $or: [
+              { trade_status: 0 },
+              { trade_status: null },
+              { user_address: userAddress }
+            ]
           },
         },
         {
@@ -156,9 +161,29 @@ export class EscrowService {
             time_constraints: "$time_constraints",
             transaction_number: "$transaction_number",
             createdAt: "$createdAt",
+            trade_status: "$trade_status",
+            trade_address: "$trade_address"
+            //trade_status: { $ifNull: ["$trade_status", { $literal: undefined }] }
           },
         },
       ]);
+
+      if(statusFilter === 'Sell'){
+        escrowsQuery = escrowsQuery.match({
+          $and: [
+            { escrow_type: 'buyer' },
+            { user_address: { $ne: userAddress } }
+          ]
+        });
+        // users.activeCount = await usersQuery.countDocuments();
+      } else if (statusFilter === 'Buy'){
+        escrowsQuery = escrowsQuery.match({
+          $and: [
+            { escrow_type: 'seller' },
+            { user_address: { $ne: userAddress } }
+          ]
+        });
+      } 
 
       if (page && pageSize) {
         // Calculate the number of documents to skip
@@ -173,12 +198,33 @@ export class EscrowService {
     }
   }
 
-  async getEscrowCount() {
+  async getEscrowCount(userAddress? : string, statusFilter?: any) {
     try {
       let escrowsQuery = this.escrowModel.find({
         is_deleted: false,
+        $or: [
+          { trade_status: 0 },
+          { trade_status: null },
+          { user_address: userAddress }
+        ]
       });
 
+      if(statusFilter === 'Sell'){
+        escrowsQuery = escrowsQuery.where({
+          $and: [
+            { escrow_type: 'buyer' },
+            { user_address: { $ne: userAddress } }
+          ]
+        });
+        // users.activeCount = await usersQuery.countDocuments();
+      } else if (statusFilter === 'Buy'){
+        escrowsQuery = escrowsQuery.where({
+          $and: [
+            { escrow_type: 'seller' },
+            { user_address: { $ne: userAddress } }
+          ]
+        });
+      } 
       const count = await escrowsQuery.countDocuments();
       return count;
     } catch (error) {
@@ -237,6 +283,8 @@ export class EscrowService {
             time_constraints: "$time_constraints",
             transaction_number: "$transaction_number",
             createdAt: "$createdAt",
+            trade_status: "$trade_status",
+            trade_address: "$trade_address"
           },
         },
         {
@@ -304,7 +352,6 @@ export class EscrowService {
           { new: true }
         )
         .exec();
-
       if (!updateEscrowData) {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
@@ -350,4 +397,229 @@ export class EscrowService {
     }
   }
 
+
+  async getAllEscrows(page?: number, pageSize?: number, statusFilter?: any): Promise<any> {
+    try {
+      let escrowsQuery = this.escrowModel.aggregate([
+        {
+          $match: {
+            is_deleted: false
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "user_address",
+            foreignField: "wallet_address",
+            as: "user_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user_info",
+            preserveNullAndEmptyArrays: true, // Make the join optional
+          },
+        },
+        {
+          $project: {
+            user_name: {
+              $concat: [
+                "$user_info.fname_alias",
+                " ",
+                "$user_info.lname_alias",
+              ],
+            },
+            profile: {
+              $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
+            },
+            escrow_type: "$escrow_type",
+            user_address: "$user_address",
+            user_id: "$user_id",
+            price_type: "$price_type",
+            fixed_price: "$fixed_price",
+            flex_min_price: "$flex_min_price",
+            flex_max_price: "$flex_max_price",
+            category: "$category",
+            object: "$object",
+            title: "$title",
+            description: "$description",
+            time_constraints: "$time_constraints",
+            transaction_number: "$transaction_number",
+            createdAt: "$createdAt",
+            trade_status: "$trade_status",
+            trade_address: "$trade_address"
+          },
+        },
+      ]);
+
+      if(statusFilter === 'Sell'){
+        escrowsQuery = escrowsQuery.match({
+          escrow_type: 'buyer' 
+        });
+      } else if (statusFilter === 'Buy'){
+        escrowsQuery = escrowsQuery.match({
+          escrow_type: 'seller' 
+        });
+      } 
+
+      if (page && pageSize) {
+        // Calculate the number of documents to skip
+        const skipCount = (page - 1) * pageSize;
+        escrowsQuery = escrowsQuery.skip(skipCount).limit(pageSize);
+      }
+
+      return await escrowsQuery.exec();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async getEscrowsCount(statusFilter?: any) {
+    try {
+      let escrowsQuery = this.escrowModel.find({
+        is_deleted: false
+      });
+
+      if(statusFilter === 'Sell'){
+        escrowsQuery = escrowsQuery.where({
+          escrow_type: 'buyer' 
+        });
+        // users.activeCount = await usersQuery.countDocuments();
+      } else if (statusFilter === 'Buy'){
+        escrowsQuery = escrowsQuery.where({
+          escrow_type: 'seller'
+        });
+      } 
+      const count = await escrowsQuery.countDocuments();
+      return count;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async getAllOpenEscrows(userAddress?: any): Promise<any> {
+    try {
+      let escrowsQuery = this.escrowModel.aggregate([
+        {
+          $match: {
+            is_deleted: false,
+            trade_status: 1,
+            $or: [
+              { trade_address: userAddress },
+              { user_address: userAddress }
+            ]
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "trade_address",
+            foreignField: "wallet_address",
+            as: "user_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user_info",
+            preserveNullAndEmptyArrays: true, // Make the join optional
+          },
+        },
+        {
+          $lookup: {
+            from: "trades", // Replace with your actual table name
+            localField: "trade_address",
+            foreignField: "wallet_address", // Replace with the field in another table that matches user_address
+            as: "trade_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$trade_info",
+            preserveNullAndEmptyArrays: true, // Make the join optional
+          },
+        },
+        {
+          $project: {
+            user_name: {
+              $concat: [
+                "$user_info.fname_alias",
+                " ",
+                "$user_info.lname_alias",
+              ],
+            },
+            profile: {
+              $ifNull: ["$user_info.profile", null], // Return null if 'profile' is null
+            },
+            escrow_type: "$escrow_type",
+            user_address: "$user_address",
+            user_id: "$user_id",
+            price_type: "$price_type",
+            fixed_price: "$fixed_price",
+            flex_min_price: "$flex_min_price",
+            flex_max_price: "$flex_max_price",
+            category: "$category",
+            object: "$object",
+            title: "$title",
+            description: "$description",
+            time_constraints: "$time_constraints",
+            transaction_number: "$transaction_number",
+            createdAt: "$createdAt",
+            trade_status: "$trade_status",
+            amount: "$trade_info.amount",
+            trade_address: "$trade_address"
+          },
+        },
+        {
+          $group: {
+            _id: "$_id", // Group by the unique identifier of the escrow document
+            user_name: { $first: "$user_name" },
+            profile: { $first: "$profile" },
+            escrow_type: { $first: "$escrow_type" },
+            user_address: { $first: "$user_address" },
+            user_id: { $first: "$user_id" },
+            price_type: { $first: "$price_type" },
+            fixed_price: { $first: "$fixed_price" },
+            flex_min_price: { $first: "$flex_min_price" },
+            flex_max_price: { $first: "$flex_max_price" },
+            category: { $first: "$category" },
+            object: { $first: "$object" },
+            title: { $first: "$title" },
+            description: { $first: "$description" },
+            time_constraints: { $first: "$time_constraints" },
+            transaction_number: { $first: "$transaction_number" },
+            createdAt: { $first: "$createdAt" },
+            trade_status: { $first: "$trade_status" },
+            amount: { $first: "$amount" },
+            trade_address: { $first: "$trade_address" }
+          },
+        },
+      ]);
+
+      return await escrowsQuery.exec();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async getOpenEscrowsCount(userAddress?: any) {
+    try {
+      let escrowsQuery = this.escrowModel.find({
+        is_deleted: false,
+        trade_status: 1,
+        $or: [
+          { trade_address: userAddress },
+          { user_address: userAddress }
+        ]
+      });
+
+      const count = await escrowsQuery.countDocuments();
+      return count;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
 }

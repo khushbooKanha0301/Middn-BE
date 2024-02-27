@@ -638,7 +638,6 @@ export class UsersController {
           UserId,
           updateAccountSettingDto.email
         );
-        console.log("userEmail ", userEmail);
         if (userEmail.length) {
           return response.status(HttpStatus.BAD_REQUEST).json({
             message: "Email already Exist.",

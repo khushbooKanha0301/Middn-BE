@@ -10,6 +10,9 @@ export class Trade {
   escrow_id: string;
 
   @Prop()
+  escrow_type: string;
+
+  @Prop()
   amount: string;
 
   @Prop()
@@ -20,6 +23,12 @@ export class Trade {
 
   @Prop()
   conversation_amount: number;
+
+  @Prop()
+  trade_status: number;
+
+  @Prop()
+  trade_address: string;
 
   @Prop()
   createdAt: string;

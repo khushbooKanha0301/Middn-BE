@@ -163,11 +163,9 @@ export class UserService {
         Key: user_photo_url_key,
         Body: user_photo_url.buffer,
       };
-      console.log("params----", params)
       await new Promise(async (resolve, reject) => {
         await s3.upload(params, async function (err, data) {
           if (!err) {
-            console.log("resolve")
             return resolve(true);
           } else {
             return reject(false);
@@ -188,14 +186,11 @@ export class UserService {
       kyc_submitted_date:currentDate,
       admin_checked_at:""
     };
-
-    console.log("updateObject", updateObject)
     const existingUser = await this.userModel.findByIdAndUpdate(
       userId,
       { ...updateObject },
       { new: true }
     );
-    console.log("existingUser ", existingUser);
     if (!existingUser) {
       throw new NotFoundException(`User #${userId} not found`);
     }

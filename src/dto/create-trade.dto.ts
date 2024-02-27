@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean } from "class-validator";
+import { IsOptional, IsString, IsBoolean , IsNumber} from "class-validator";
 
 export class CreateTradeDto {
 
@@ -25,6 +25,18 @@ export class CreateTradeDto {
   @IsOptional()
   @IsString()
   conversation_amount: number;
+
+  @IsOptional()
+  @IsNumber()
+  trade_status: number;
+
+  @IsOptional()
+  @IsString()
+  trade_address: string;
+
+  @IsOptional()
+  @IsString()
+  escrow_type: string;
 
   @IsOptional()
   @IsString()

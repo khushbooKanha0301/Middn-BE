@@ -12,6 +12,8 @@ export interface IEscrows extends Document {
   readonly description: string;
   readonly time_constraints: string;
   readonly transaction_number: string;
+  readonly trade_status: number;
+  readonly trade_address: string;
   readonly created_at: string;
   readonly updated_at: string;
 }

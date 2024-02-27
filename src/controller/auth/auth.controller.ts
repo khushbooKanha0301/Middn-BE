@@ -139,9 +139,11 @@ export class AuthController {
     try {
       const page = req.query.page ? +req.query.page : 1;
       const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
-      const escrows = await this.escrowService.fetchAllEscrows(page, pageSize);
-      const escrowsCount = await this.escrowService.getEscrowCount();
-
+      const statusFilter = req.query.statusFilter ? req.query.statusFilter : null;
+      const userData = req.query.userAddress;
+      const escrows = await this.escrowService.fetchAllEscrows(page, pageSize, userData, statusFilter);
+      const escrowsCount = await this.escrowService.getEscrowCount(userData, statusFilter);
+ 
       if (escrows.length > 0) {
         await Promise.all(
           escrows.map(async (user: any) => {
@@ -191,7 +193,6 @@ export class AuthController {
       let responseData = await axios.get(
         `https://api.coingate.com/api/v2/currencies?kind=crypto`
       );
-      console.log("---------------", );
       if (responseData) {
         return response.json({ 
           message: `Crypto get successfully`,
@@ -243,6 +244,54 @@ export class AuthController {
       }
     } catch (err) {
       return response.status(err.status).json(err.response);
+    }
+  }
+
+  @Get("/getAllEscrowsWithoutLogin")
+  async getAllEscrowsWithoutLogin(@Req() req: any, @Res() response) {
+    try {
+      const page = req.query.page ? +req.query.page : 1;
+      const pageSize = req.query.pageSize ? +req.query.pageSize : 10;
+      const statusFilter = req.query.statusFilter ? req.query.statusFilter : null;
+      const escrows = await this.escrowService.getAllEscrows(page, pageSize,  statusFilter);
+      const escrowsCount = await this.escrowService.getEscrowsCount(statusFilter);
+ 
+      if (escrows.length > 0) {
+        await Promise.all(
+          escrows.map(async (user: any) => {
+            let newImage = "";
+            if (user.profile) {
+              const s3 = this.configService.get("s3");
+              const bucketName = this.configService.get("aws_s3_bucket_name");
+              newImage = s3.getSignedUrl("getObject", {
+                Bucket: bucketName,
+                Key: user.profile ? user.profile : "",
+                Expires: 600000,
+              });
+
+              (user.newImage = newImage ? newImage : null),
+                (user.fname_alias = user.fname_alias
+                  ? user.fname_alias
+                  : "John");
+              user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
+            }
+          })
+        );
+
+        return response.status(HttpStatus.OK).json({
+          status: "success",
+          data: escrows,
+          escrowsCount: escrowsCount,
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          message: "Escrow not found",
+          escrowsCount: 0,
+          data: []
+        });
+      }
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
 

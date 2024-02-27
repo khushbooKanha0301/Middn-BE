@@ -114,8 +114,6 @@ export class EscrowsController {
           errorMessage = "Only Flexible Minimum and Maxium Price Accepted";
         } 
       }
-      
-
       if (errorMessage) {
         return response
           .status(HttpStatus.BAD_REQUEST)
@@ -137,13 +135,16 @@ export class EscrowsController {
           Math.floor(Math.random() * (9999999999 - 1000000000 + 1)) + 1000000000
         ).toString(),
         is_deleted: false,
+        trade_status: 0,
+        trade_address: null,
         createdAt: moment.utc().format(),
       };
       const escrow = await this.escrowService.createEscrow(escrowDto);
       return response.status(HttpStatus.OK).json({
         message: "Escrow created successfully",
         data: {
-          escrow_number: escrow?.transaction_number,
+         // escrow: escrow,
+          escrow_number: escrow?._id,
         },
       });
     } catch (err) {
@@ -341,6 +342,55 @@ export class EscrowsController {
       }
     } catch (err) {
       console.log(err);
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @Get("/getAllOpenEscrows/:address")
+  async getAllOpenEscrows(
+    @Req() req: any,
+    @Res() response, 
+    @Param("address") address: string
+    ) {
+    try {
+      const escrows = await this.escrowService.getAllOpenEscrows(address);
+      const escrowsCount = await this.escrowService.getOpenEscrowsCount(address);
+ 
+      if (escrows.length > 0) {
+        await Promise.all(
+          escrows.map(async (user: any) => {
+            let newImage = "";
+            if (user.profile) {
+              const s3 = this.configService.get("s3");
+              const bucketName = this.configService.get("aws_s3_bucket_name");
+              newImage = s3.getSignedUrl("getObject", {
+                Bucket: bucketName,
+                Key: user.profile ? user.profile : "",
+                Expires: 600000,
+              });
+
+              (user.newImage = newImage ? newImage : null),
+                (user.fname_alias = user.fname_alias
+                  ? user.fname_alias
+                  : "John");
+              user.lname_alias = user.lname_alias ? user.lname_alias : "Doe";
+            }
+          })
+        );
+
+        return response.status(HttpStatus.OK).json({
+          status: "success",
+          data: escrows,
+          escrowsCount: escrowsCount,
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          message: "Escrow not found",
+          escrowsCount: 0,
+          data: []
+        });
+      }
+    } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }

@@ -19,4 +19,18 @@ export class TradeService {
       throw error;
     }
   }
+
+  async getTrade(escrow_id: string): Promise<any> {
+    try {
+      const existingTrade = await this.tradeModel
+      .findOne({escrow_id: escrow_id , trade_status : 1})
+      .select("-_id escrow_id trade_status")
+      .exec();
+      return existingTrade;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
 }
