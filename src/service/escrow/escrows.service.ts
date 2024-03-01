@@ -114,11 +114,17 @@ export class EscrowService {
         {
           $match: {
             is_deleted: false,
+            // trade_status: 1,
             $or: [
               { trade_status: 0 },
-              { trade_status: null },
+              { trade_address: userAddress },
               { user_address: userAddress }
             ]
+            // $or: [
+            //   { trade_status: 0 },
+            //   { trade_status: null },
+            //   { user_address: userAddress }
+            // ]
           },
         },
         {
@@ -202,11 +208,17 @@ export class EscrowService {
     try {
       let escrowsQuery = this.escrowModel.find({
         is_deleted: false,
+        // trade_status: 1,
         $or: [
           { trade_status: 0 },
-          { trade_status: null },
+          { trade_address: userAddress },
           { user_address: userAddress }
         ]
+        // $or: [
+        //   { trade_status: 0 },
+        //   { trade_status: null },
+        //   { user_address: userAddress }
+        // ]
       });
 
       if(statusFilter === 'Sell'){
@@ -396,7 +408,6 @@ export class EscrowService {
       throw error;
     }
   }
-
 
   async getAllEscrows(page?: number, pageSize?: number, statusFilter?: any): Promise<any> {
     try {
@@ -595,6 +606,11 @@ export class EscrowService {
             trade_address: { $first: "$trade_address" }
           },
         },
+        {
+          $sort: {
+            createdAt: -1 // Sort by createdAt field in ascending order
+          }
+        }
       ]);
 
       return await escrowsQuery.exec();

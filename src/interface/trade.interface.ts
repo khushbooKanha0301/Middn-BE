@@ -11,7 +11,7 @@ export interface ITrade extends Document {
   readonly trade_status: number;
   readonly trade_address: string;
   readonly conversation_amount: string;
-  readonly created_at: string;
-  readonly updated_at: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
   
 }

@@ -14,6 +14,6 @@ export interface IEscrows extends Document {
   readonly transaction_number: string;
   readonly trade_status: number;
   readonly trade_address: string;
-  readonly created_at: string;
+  readonly createdAt: string;
   readonly updated_at: string;
 }

@@ -24,7 +24,7 @@ export class TradeService {
     try {
       const existingTrade = await this.tradeModel
       .findOne({escrow_id: escrow_id , trade_status : 1})
-      .select("-_id escrow_id trade_status")
+      .select("-_id escrow_id trade_status user_address trade_address")
       .exec();
       return existingTrade;
     } catch (error) {

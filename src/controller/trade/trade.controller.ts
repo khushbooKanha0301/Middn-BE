@@ -3,6 +3,7 @@ import { SkipThrottle } from "@nestjs/throttler";
 import { TradeService } from "src/service/trade/trade.service";
 import { CreateTradeDto } from "src/dto/create-trade.dto";
 import { EscrowService } from "src/service/escrow/escrows.service";
+const moment = require("moment");
 
 @SkipThrottle()
 @Controller("trade")
@@ -20,18 +21,8 @@ export class TradeController {
           message: "Trade is closed!",
         });
       }
+      createTradeDto.createdAt=  moment.utc().format()
       const newTrade = await this.tradeService.createTrade(createTradeDto);
-      // let responseData = await axios.get(
-      //   `https://api.coingate.com/v2/rates/merchant/${createTradeDto.crypto_currency}/${createTradeDto.country_currency}`
-      // );
-      // let amountUSD = Number(createTradeDto.amount) * responseData.data;
-      // let cryptoAmount = amountUSD * 0.49;
-      // if(cryptoAmount != createTradeDto?.conversation_amount)
-      // {
-      //   return response.status(HttpStatus.BAD_REQUEST).json({
-      //     message: "Something Went Wrong.",
-      //   });
-      // }
       const escrowDto = {trade_status : 1, trade_address: createTradeDto.trade_address}
       if(newTrade){
         await this.escrowService.updateEscrowData(createTradeDto.escrow_id, escrowDto);

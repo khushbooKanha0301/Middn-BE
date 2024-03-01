@@ -12,7 +12,6 @@ import {
 } from "@nestjs/common";
 
 import { ConfigService } from "@nestjs/config";
-import { InjectModel } from "@nestjs/mongoose";
 import { SkipThrottle } from "@nestjs/throttler";
 import { UserService } from "src/service/user/users.service";
 import { EscrowService } from "src/service/escrow/escrows.service";
