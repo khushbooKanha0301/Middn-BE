@@ -218,4 +218,18 @@ export class UserService {
     return [];
   }
 
+  async updateUserById(userId: string,body:any): Promise<IUser> {
+    console.log(body)
+    const existingUser = await this.userModel.findOneAndUpdate(
+      { wallet_address: userId },
+      { ...body },
+      { new: true }
+    );
+    console.log("existingUser ", existingUser);
+    if (!existingUser) {
+      throw new NotFoundException(`User #${userId} not found`);
+    }
+    return existingUser;
+  }
+
 }

@@ -12,7 +12,9 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
-  UploadedFiles
+  UploadedFiles,
+  NotFoundException,
+  BadRequestException
 } from "@nestjs/common";
 import { CreateUserDto } from "src/dto/create-users.dto";
 import { UpdateUserProfileDto } from "src/dto/update-users-profile.dto";
@@ -34,6 +36,7 @@ const moment = require("moment");
 import * as geoip from "geoip-lite";
 import { UpdateKycDataDto } from "src/dto/update-kyc.dto";
 import { ReportUserService } from "src/service/report-users/reportUser.service";
+import { IUser } from "src/interface/users.interface";
 
 var jwt = require("jsonwebtoken");
 const getSignMessage = (address, nonce) => {
@@ -53,7 +56,8 @@ export class UsersController {
     private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
     private readonly loginHistoryService: LoginHistoryService,
-    private readonly reportUserService: ReportUserService
+    private readonly reportUserService: ReportUserService,
+    @InjectModel("user") private userModel: Model<IUser>,
   ) {}
 
   @SkipThrottle(false)
@@ -1188,7 +1192,9 @@ export class UsersController {
       const reqData = req.body;
       const toReportUser = reqData?.to_report_user;
       const reportReason = reqData?.reason;
+      const userStatus = reqData?.userStatus;
       const fromReportUser = req.headers.authData.verifiedAddress;
+
       if (!reportReason || reportReason == "") {
         return response
           .status(HttpStatus.BAD_REQUEST)
@@ -1209,16 +1215,6 @@ export class UsersController {
           .status(HttpStatus.BAD_REQUEST)
           .json({ message: "You can not report yourself." });
       }
-      const isAlreadyReported =
-        await this.reportUserService.checkAlreadyReported(
-          fromReportUser,
-          toReportUser
-        );
-      if (isAlreadyReported) {
-        return response
-          .status(HttpStatus.BAD_REQUEST)
-          .json({ message: "You already reported this user." });
-      }
       const isFromUserExist = await this.userService.getFindbyAddress(
         fromReportUser
       );
@@ -1235,18 +1231,38 @@ export class UsersController {
           .status(HttpStatus.BAD_REQUEST)
           .json({ message: "Report To user does not exist." });
       }
+
+      const isAlreadyReported = await this.reportUserService.checkAlreadyReported(
+        fromReportUser,
+        toReportUser
+      );
+
       let reportUserDto = {
         report_from_user_address: fromReportUser,
         reason: reportReason,
+        userStatus: userStatus,
         report_to_user_address: toReportUser,
         created_at: moment.utc().format(),
       };
-      const reportUser = await this.reportUserService.createReportUser(
-        reportUserDto
-      );
+      let reportUser;
+
+      if (isAlreadyReported) {
+        const UserId  = isAlreadyReported._id
+       
+        reportUser = await this.reportUserService.updateReportUser(
+          UserId,
+          reportUserDto
+        );
+      } else {
+        reportUser = await this.reportUserService.createReportUser(
+          reportUserDto
+        );
+      }
+     
       return response.status(HttpStatus.OK).json({
         status: "success",
         message: "User Reported successfully",
+        reportUser: reportUser
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
@@ -1751,5 +1767,47 @@ export class UsersController {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
-  
+
+  @Post("/getUserStatus")
+  async getUserStatus(@Req() req: any, @Res() response) {
+    try {
+      const reqData = req.body;
+      const toReportUser = reqData?.report_to_user_address;
+      const fromReportUser = reqData?.report_from_user_address
+      const isAlreadyReported = await this.reportUserService.fetchReportedData(
+        fromReportUser,
+        toReportUser
+      );
+      return response.status(HttpStatus.OK).json({
+        status: "success",
+        message: "User Reported successfully",
+        reportUser: isAlreadyReported
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @Post("/getUserStatusToMessage")
+  async getUserStatusToMessage(@Req() req: any, @Res() response) {
+    try {
+      const reqData = req.body;
+      const toReportUser = reqData?.report_to_user_address;
+ console.log("toReportUser ", toReportUser);
+      const fromReportUser = reqData?.report_from_user_address
+ console.log("fromReportUser ", fromReportUser);
+      const isAlreadyReported = await this.reportUserService.fetchReportedDataStatus(
+        fromReportUser,
+        toReportUser
+      );
+      console.log(isAlreadyReported)
+      return response.status(HttpStatus.OK).json({
+        status: "success",
+        message: "User Reported successfully",
+        reportUser: isAlreadyReported
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
 }

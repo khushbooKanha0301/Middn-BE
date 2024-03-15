@@ -63,5 +63,7 @@ export class User {
 	kyc_submitted_date: string;
 	@Prop()
 	admin_checked_at: string;
+	@Prop({ default: false })
+	user_status:boolean;
 }	
 export const UserSchema = SchemaFactory.createForClass(User);

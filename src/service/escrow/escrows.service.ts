@@ -114,17 +114,11 @@ export class EscrowService {
         {
           $match: {
             is_deleted: false,
-            // trade_status: 1,
             $or: [
               { trade_status: 0 },
               { trade_address: userAddress },
               { user_address: userAddress }
             ]
-            // $or: [
-            //   { trade_status: 0 },
-            //   { trade_status: null },
-            //   { user_address: userAddress }
-            // ]
           },
         },
         {
@@ -214,11 +208,6 @@ export class EscrowService {
           { trade_address: userAddress },
           { user_address: userAddress }
         ]
-        // $or: [
-        //   { trade_status: 0 },
-        //   { trade_status: null },
-        //   { user_address: userAddress }
-        // ]
       });
 
       if(statusFilter === 'Sell'){

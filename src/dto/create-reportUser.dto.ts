@@ -1,4 +1,4 @@
-import { IsOptional, IsNumber, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsBoolean, IsString, MaxLength } from "class-validator";
 export class CreateReportUserDto {
 	@IsOptional()
 	@IsString()
@@ -7,6 +7,10 @@ export class CreateReportUserDto {
 	@IsOptional()
 	@IsString()
 	report_to_user_address: string;
+
+	@IsOptional()
+	@IsBoolean()
+	userStatus: boolean;
 
 	@IsOptional()
 	@IsString()

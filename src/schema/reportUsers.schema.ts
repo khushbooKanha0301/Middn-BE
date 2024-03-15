@@ -6,6 +6,8 @@ export class ReportUsers {
 	@Prop()
 	report_to_user_address: string;
 	@Prop()
+	userStatus: boolean;
+	@Prop()
 	reason: string;
 	@Prop()
 	created_at: string;
