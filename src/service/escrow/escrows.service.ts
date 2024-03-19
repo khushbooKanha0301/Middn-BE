@@ -528,6 +528,20 @@ export class EscrowService {
         },
         {
           $lookup: {
+            from: "users",
+            localField: "user_address",
+            foreignField: "wallet_address",
+            as: "users_info",
+          },
+        },
+        {
+          $unwind: {
+            path: "$users_info",
+            preserveNullAndEmptyArrays: true, // Make the join optional
+          },
+        },
+        {
+          $lookup: {
             from: "trades", // Replace with your actual table name
             localField: "trade_address",
             foreignField: "wallet_address", // Replace with the field in another table that matches user_address
@@ -542,11 +556,18 @@ export class EscrowService {
         },
         {
           $project: {
-            user_name: {
+            user_trade_name: {
               $concat: [
                 "$user_info.fname_alias",
                 " ",
                 "$user_info.lname_alias",
+              ],
+            },
+            user_escrow_name: {
+              $concat: [
+                "$users_info.fname_alias",
+                " ",
+                "$users_info.lname_alias",
               ],
             },
             profile: {
@@ -574,7 +595,8 @@ export class EscrowService {
         {
           $group: {
             _id: "$_id", // Group by the unique identifier of the escrow document
-            user_name: { $first: "$user_name" },
+            user_trade_name: { $first: "$user_trade_name" },
+            user_escrow_name: { $first: "$user_escrow_name" },
             profile: { $first: "$profile" },
             escrow_type: { $first: "$escrow_type" },
             user_address: { $first: "$user_address" },
