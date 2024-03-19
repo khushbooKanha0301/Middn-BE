@@ -224,6 +224,7 @@ export class UsersController {
       });
     }
   }
+
   @SkipThrottle(false)
   @Put()
   @UseInterceptors(FileInterceptor("profile"))
@@ -1793,14 +1794,11 @@ export class UsersController {
     try {
       const reqData = req.body;
       const toReportUser = reqData?.report_to_user_address;
- console.log("toReportUser ", toReportUser);
       const fromReportUser = reqData?.report_from_user_address
- console.log("fromReportUser ", fromReportUser);
       const isAlreadyReported = await this.reportUserService.fetchReportedDataStatus(
         fromReportUser,
         toReportUser
       );
-      console.log(isAlreadyReported)
       return response.status(HttpStatus.OK).json({
         status: "success",
         message: "User Reported successfully",
