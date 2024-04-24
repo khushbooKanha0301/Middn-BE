@@ -1,4 +1,4 @@
-import { IsOptional, IsBoolean, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsBoolean, IsString } from "class-validator";
 export class CreateReportUserDto {
 	@IsOptional()
 	@IsString()

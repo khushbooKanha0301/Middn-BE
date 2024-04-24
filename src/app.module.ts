@@ -26,6 +26,7 @@ import { LoginHistoryService } from "./service/login-history/login-history.servi
 import { EscrowsController } from "./controller/escrow/escrows.controller";
 import { EscrowService } from "./service/escrow/escrows.service";
 import { ReportUsersSchema } from "./schema/reportUsers.schema";
+import { BlockUsersSchema } from "./schema/blockUser.schema";
 import { ReportUserService } from "./service/report-users/reportUser.service";
 
 @Module({
@@ -41,6 +42,9 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
     MongooseModule.forFeature([{ name: "escrow", schema: EscrowSchema }]),
     MongooseModule.forFeature([
       { name: "report_users", schema: ReportUsersSchema },
+    ]),
+    MongooseModule.forFeature([
+      { name: "block_users", schema: BlockUsersSchema },
     ]),
     ConfigModule.forRoot({
       isGlobal: true,

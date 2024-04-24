@@ -14,7 +14,7 @@ import {
   UploadedFile,
   UploadedFiles,
   NotFoundException,
-  BadRequestException
+  BadRequestException,
 } from "@nestjs/common";
 import { CreateUserDto } from "src/dto/create-users.dto";
 import { UpdateUserProfileDto } from "src/dto/update-users-profile.dto";
@@ -57,7 +57,7 @@ export class UsersController {
     private readonly configService: ConfigService,
     private readonly loginHistoryService: LoginHistoryService,
     private readonly reportUserService: ReportUserService,
-    @InjectModel("user") private userModel: Model<IUser>,
+    @InjectModel("user") private userModel: Model<IUser>
   ) {}
 
   @SkipThrottle(false)
@@ -128,7 +128,7 @@ export class UsersController {
 
       if (verifiedAddress.toLowerCase() == address.toLowerCase()) {
         let addressByUser = await this.userService.getFindbyAddress(address);
- 
+
         if (addressByUser?.is_banned === true) {
           return response
             .status(HttpStatus.BAD_REQUEST)
@@ -370,7 +370,7 @@ export class UsersController {
       ) {
         delete updateAccountSettingDto.location;
       }
-      
+
       const countries = [
         "AF",
         "AL",
@@ -647,7 +647,7 @@ export class UsersController {
           return response.status(HttpStatus.BAD_REQUEST).json({
             message: "Email already Exist.",
           });
-        } 
+        }
       }
 
       if (!updateAccountSettingDto.phone) {
@@ -663,20 +663,19 @@ export class UsersController {
           message: "Invalid Phone.",
         });
       }
-      
+
       if (updateAccountSettingDto.phone) {
         let userPhone = await this.userService.getFindbyPhone(
           UserId,
           updateAccountSettingDto.phone
         );
-        
+
         if (userPhone.length) {
           return response.status(HttpStatus.BAD_REQUEST).json({
             message: "Phone already Exist.",
           });
-        } 
+        }
       }
-
 
       const countryCode = [
         "+93",
@@ -1233,10 +1232,11 @@ export class UsersController {
           .json({ message: "Report To user does not exist." });
       }
 
-      const isAlreadyReported = await this.reportUserService.checkAlreadyReported(
-        fromReportUser,
-        toReportUser
-      );
+      const isAlreadyReported =
+        await this.reportUserService.checkAlreadyReported(
+          fromReportUser,
+          toReportUser
+        );
 
       let reportUserDto = {
         report_from_user_address: fromReportUser,
@@ -1245,25 +1245,14 @@ export class UsersController {
         report_to_user_address: toReportUser,
         created_at: moment.utc().format(),
       };
-      let reportUser;
+      let reportUser = await this.reportUserService.createReportUser(
+        reportUserDto
+      );
 
-      if (isAlreadyReported) {
-        const UserId  = isAlreadyReported._id
-       
-        reportUser = await this.reportUserService.updateReportUser(
-          UserId,
-          reportUserDto
-        );
-      } else {
-        reportUser = await this.reportUserService.createReportUser(
-          reportUserDto
-        );
-      }
-     
       return response.status(HttpStatus.OK).json({
         status: "success",
         message: "User Reported successfully",
-        reportUser: reportUser
+        reportUser: reportUser,
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
@@ -1323,11 +1312,13 @@ export class UsersController {
   }
 
   @Get("/getUserByAddress/:address")
-  async getUserByAddress(@Req() req: any, @Res() response,  @Param("address") address: string) {
+  async getUserByAddress(
+    @Req() req: any,
+    @Res() response,
+    @Param("address") address: string
+  ) {
     try {
-      let userDetails = await this.userService.getFindbyAddress(
-        address
-      );
+      let userDetails = await this.userService.getFindbyAddress(address);
       return response.status(HttpStatus.OK).json({
         data: userDetails,
       });
@@ -1590,7 +1581,7 @@ export class UsersController {
   ) {
     try {
       let reqError = null;
-      
+
       updateKycDto.fname = updateKycDto.fname.trim();
       updateKycDto.lname = updateKycDto.lname.trim();
       updateKycDto.res_address = updateKycDto.res_address.trim();
@@ -1636,8 +1627,7 @@ export class UsersController {
         }
       }
       const pattern = /^[a-zA-Z0-9]*$/;
-      if(!updateKycDto.postal_code.match(pattern))
-      {
+      if (!updateKycDto.postal_code.match(pattern)) {
         reqError = "Postal code not valid";
       }
       if (reqError) {
@@ -1755,10 +1745,15 @@ export class UsersController {
             .status(HttpStatus.BAD_REQUEST)
             .json({ message: "Please upload Valid Image" });
         }
-        if (file[0].size / (1024 * 1024) > allowed_file_size || file[0].size < 10240) {
+        if (
+          file[0].size / (1024 * 1024) > allowed_file_size ||
+          file[0].size < 10240
+        ) {
           return response
             .status(HttpStatus.BAD_REQUEST)
-            .json({ message: "File size should come between 10 KB to 5120 KB" });
+            .json({
+              message: "File size should come between 10 KB to 5120 KB",
+            });
         }
         return response
           .status(HttpStatus.OK)
@@ -1774,7 +1769,7 @@ export class UsersController {
     try {
       const reqData = req.body;
       const toReportUser = reqData?.report_to_user_address;
-      const fromReportUser = reqData?.report_from_user_address
+      const fromReportUser = reqData?.report_from_user_address;
       const isAlreadyReported = await this.reportUserService.fetchReportedData(
         fromReportUser,
         toReportUser
@@ -1782,7 +1777,7 @@ export class UsersController {
       return response.status(HttpStatus.OK).json({
         status: "success",
         message: "User Reported successfully",
-        reportUser: isAlreadyReported
+        reportUser: isAlreadyReported,
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
@@ -1793,16 +1788,92 @@ export class UsersController {
   async getUserStatusToMessage(@Req() req: any, @Res() response) {
     try {
       const reqData = req.body;
-      const toReportUser = reqData?.report_to_user_address;
-      const fromReportUser = reqData?.report_from_user_address
-      const isAlreadyReported = await this.reportUserService.fetchReportedDataStatus(
-        fromReportUser,
-        toReportUser
-      );
+      const toReportUser = reqData?.block_to_user_address;
+      const fromReportUser = reqData?.block_from_user_address;
+      const isAlreadyReported =
+        await this.reportUserService.fetchReportedDataStatus(
+          fromReportUser,
+          toReportUser
+        );
       return response.status(HttpStatus.OK).json({
         status: "success",
         message: "User Reported successfully",
-        reportUser: isAlreadyReported
+        reportUser: isAlreadyReported,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @SkipThrottle(false)
+  @Post("/userBlockStatus")
+  async userBlockStatus(@Req() req: any, @Res() response) {
+    try {
+      const reqData = req.body;
+      const toBlockUser = reqData?.to_block_user;
+      const userStatus = reqData?.userStatus;
+      const fromBlockUser = req.headers.authData.verifiedAddress;
+     
+      if (!toBlockUser) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ message: "User is missing." });
+      }
+      if (!fromBlockUser) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ message: "Blocked from User is missing." });
+      }
+      if (fromBlockUser == toBlockUser) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ message: "You can not Block yourself." });
+      }
+      const isFromUserExist = await this.userService.getFindbyAddress(
+        fromBlockUser
+      );
+      if (!isFromUserExist) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ message: "Block From user does not exist." });
+      }
+      const isToUserExist = await this.userService.getFindbyAddress(
+        toBlockUser
+      );
+      if (!isToUserExist) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ message: "Block To user does not exist." });
+      }
+
+      const isAlreadyReported = await this.reportUserService.checkAlreadyBlock(
+        fromBlockUser,
+        toBlockUser
+      );
+
+      let blockUserDto = {
+        block_from_user_address: fromBlockUser,
+        userStatus: userStatus,
+        block_to_user_address: toBlockUser,
+        created_at: moment.utc().format(),
+      };
+      let blockUser;
+
+      if (isAlreadyReported) {
+        const UserId = isAlreadyReported._id;
+
+        blockUser = await this.reportUserService.updateBlockUser(
+          UserId,
+          blockUserDto
+        );
+      } else {
+        blockUser = await this.reportUserService.createBlockUser(blockUserDto);
+      }
+
+      return response.status(HttpStatus.OK).json({
+        status: "success",
+        message: "User Blocked successfully",
+        blockUser: blockUser,
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
