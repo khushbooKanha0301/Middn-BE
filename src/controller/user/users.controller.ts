@@ -60,6 +60,15 @@ export class UsersController {
     @InjectModel("user") private userModel: Model<IUser>
   ) {}
 
+
+  /**
+   * 
+   * @param req 
+   * @param response 
+   * @param body 
+   * @param query 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/verify")
   async verify(
@@ -207,6 +216,13 @@ export class UsersController {
     }
   }
 
+
+  /**
+   * This endpoint creates a new user.
+   * @param response 
+   * @param createUserDto 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/createUsers")
   async createUsers(@Res() response, @Body() createUserDto: CreateUserDto) {
@@ -225,6 +241,14 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint updates user information, including profile picture.
+   * @param req 
+   * @param response 
+   * @param updateUsersDto 
+   * @param file 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put()
   @UseInterceptors(FileInterceptor("profile"))
@@ -313,6 +337,14 @@ export class UsersController {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
+
+  /**
+   * This endpoint updates account settings for a user.
+   * @param req 
+   * @param response 
+   * @param updateAccountSettingDto 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/updateAccountSettings")
   @UseInterceptors(FileInterceptor("profile"))
@@ -1185,6 +1217,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint allows a user to report another user.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/reportUser")
   async reportUser(@Req() req: any, @Res() response) {
@@ -1259,6 +1297,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint  retrieves the user details.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/getuser")
   async getUser(@Req() req: any, @Res() response) {
     try {
@@ -1298,6 +1342,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint retrives the login history
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/getLoginHistory")
   async getLoginHistory(@Req() req: any, @Res() response) {
     try {
@@ -1311,6 +1361,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint retrives the user details by addess
+   * @param req 
+   * @param response 
+   * @param address 
+   * @returns 
+   */
   @Get("/getUserByAddress/:address")
   async getUserByAddress(
     @Req() req: any,
@@ -1336,6 +1393,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint retirves all the user details.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/allusers")
   async getAllUsersExceptAuth(@Req() req: any, @Res() response) {
     try {
@@ -1431,6 +1494,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * This api endpoint is used to logout 
+   * @param req 
+   * @param response 
+   * @param updateUsersDto 
+   * @returns 
+   */
   @Get("/logout")
   async logout(
     @Req() req: any,
@@ -1454,6 +1524,13 @@ export class UsersController {
       return response.status(err.status).json(err.response);
     }
   }
+
+  /**
+   * This endpoint is designed to retrieve the total number of unread messages for the authenticated user
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/getUnreadedMessages")
   async getUnreadedMessages(@Req() req: any, @Res() response) {
     try {
@@ -1479,6 +1556,13 @@ export class UsersController {
       });
     }
   }
+
+  /**
+   * This endpoint is designed to generate a secret key for two-factor authentication (2FA) and associate it with the user
+   * @param req 
+   * @param res 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Get("/generate2FASecret")
   async generate2FASecret(@Req() req: any, @Res() res) {
@@ -1505,6 +1589,13 @@ export class UsersController {
       return res.status(err.status).json(err.response);
     }
   }
+
+  /**
+   * This endpoint is responsible for validating the Time-Based One-Time Password (TOTP) provided by the user against the secret key stored for 2FA
+   * @param req 
+   * @param res 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("validateTOTP")
   async validateTOTP(@Req() req: any, @Res() res) {
@@ -1542,6 +1633,13 @@ export class UsersController {
       return res.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
+
+  /**
+   * The endpoint serves to disable two-factor authentication (2FA) for a user account. 
+   * @param req 
+   * @param res 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Get("disable2FA")
   async disable2FA(@Req() req: any, @Res() res) {
@@ -1570,6 +1668,14 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint is quite comprehensive and handles various aspects of updating (KYC) information for a user account
+   * @param response 
+   * @param updateKycDto 
+   * @param req 
+   * @param files 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/updateKyc")
   @UseInterceptors(AnyFilesInterceptor())
@@ -1723,6 +1829,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint serves to validate the type and size of an uploaded file.
+   * @param response 
+   * @param file 
+   * @returns 
+   */
   @Post("/validate-file-type")
   @UseInterceptors(AnyFilesInterceptor())
   async validateFileType(
@@ -1764,6 +1876,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint retrieves the status of a user based on the report data
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Post("/getUserStatus")
   async getUserStatus(@Req() req: any, @Res() response) {
     try {
@@ -1784,6 +1902,14 @@ export class UsersController {
     }
   }
 
+  /**
+   * 
+  * This  endpoint seems similar to the previous one,
+  * but it appears to be related to user blocking or reporting for messaging purposes
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Post("/getUserStatusToMessage")
   async getUserStatusToMessage(@Req() req: any, @Res() response) {
     try {
@@ -1805,6 +1931,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * This endpoint is responsible for handling the blocking of users
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/userBlockStatus")
   async userBlockStatus(@Req() req: any, @Res() response) {

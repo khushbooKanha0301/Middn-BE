@@ -2,8 +2,7 @@ import {
   NestMiddleware,
   Injectable,
   HttpException,
-  HttpStatus,
-  Logger,
+  HttpStatus
 } from "@nestjs/common";
 import { NextFunction, Request, Response } from "express";
 import { TokenService } from "src/service/token/token.service";
@@ -11,15 +10,16 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { IUser } from "src/interface/users.interface";
 const jwtSecret = "lkjhh";
-var jwt = require("jsonwebtoken");
+let jwt = require("jsonwebtoken");
 
 @Injectable()
 export class AuthenticateMiddleware implements NestMiddleware {
+
   constructor(private readonly tokenService: TokenService,
     @InjectModel("user") private userModel: Model<IUser>
     ) {}
 
-  async use(req: Request, res: Response, next: NextFunction) {
+    async use(req: Request, res: Response, next: NextFunction) {
     try {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];

@@ -33,6 +33,12 @@ export class AuthController {
     private readonly escrowService: EscrowService
   ) {}
 
+  /**
+   * This endpoint generates a temporary token for a given address ID.
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @Get("/nonce/:addressId")
   async generateToken(@Res() response, @Param() param: { addressId: string }) {
     try {
@@ -47,7 +53,13 @@ export class AuthController {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
-
+  
+  /**
+   * This endpoint retrieves user details based on the provided address.
+   * @param response 
+   * @param address 
+   * @returns 
+   */
   @Get("/getuser/:address")
   async getUserDetailByAddress(
     @Res() response,
@@ -75,6 +87,13 @@ export class AuthController {
     }
   }
 
+  /**
+   * This endpoint is responsible for retrieving active escrows associated with a specific user address.
+   * @param req 
+   * @param response 
+   * @param address 
+   * @returns 
+   */
   @Get("/activeEscrows/:address")
   async activeEscrows(
     @Req() req: any,
@@ -134,6 +153,12 @@ export class AuthController {
     }
   }
 
+  /**
+   * This endpoint is responsible for fetching all escrows based on provided filters.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/getAllEscrows")
   async getAllEscrows(@Req() req: any, @Res() response) {
     try {
@@ -183,6 +208,12 @@ export class AuthController {
     }
   }
 
+  /**
+   * This endpoint is responsible for fetching cryptocurrency details from an external API.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/getCryptoDetails")
   async getCryptoDetails(
     @Req() req: any,
@@ -209,6 +240,13 @@ export class AuthController {
     }
   }
 
+  /**
+   *  This endpoint is responsible for calculating the equivalent cryptocurrency amount
+   * @param req 
+   * @param response 
+   * @param body 
+   * @returns 
+   */
   @Post("/getCryptoAmountDetails")
   async getCryptoAmountDetails(
     @Req() req: any,
@@ -247,6 +285,12 @@ export class AuthController {
     }
   }
 
+  /**
+   * Endpoint to retrieve all escrows without requiring login.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/getAllEscrowsWithoutLogin")
   async getAllEscrowsWithoutLogin(@Req() req: any, @Res() response) {
     try {

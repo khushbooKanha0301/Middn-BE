@@ -11,6 +11,12 @@ export class TradeController {
   constructor(private readonly tradeService: TradeService,
     private readonly escrowService: EscrowService) {}
 
+  /**
+   * This endpoint creates a new trade associated with an escrow.
+   * @param response 
+   * @param createTradeDto 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/createTrade")
   async createTrade(@Res() response, @Body() createTradeDto: CreateTradeDto) {
@@ -41,6 +47,13 @@ export class TradeController {
     }
   }
 
+  /**
+   * This endpoint retrieves the trade associated with the specified escrow.
+   * @param req 
+   * @param response 
+   * @param escrowId 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Get("/getTradeByEscrow/:escrowId")
   async getTradeByEscrow(

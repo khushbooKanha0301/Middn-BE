@@ -1,7 +1,6 @@
 import { Document } from "mongoose";
 
 export interface ITrade extends Document {
-
   readonly user_address: string;
   readonly escrow_id: string;
   readonly escrow_type: string;

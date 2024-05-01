@@ -1,4 +1,5 @@
 import { Document } from 'mongoose';
+
 export interface ILoginHistory extends Document{
     readonly user_id: string;
     readonly wallet_address: string;

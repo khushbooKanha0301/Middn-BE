@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 
 @Injectable()
 export class CustomThrottleMiddleware implements NestMiddleware {
+  // This use middleware function is designed to implement request throttling based on user ID and request URL
   async use(req: Request, res: Response, next: () => void) {
     const userId = req.headers?.address?.toString();
     const now = Date.now();

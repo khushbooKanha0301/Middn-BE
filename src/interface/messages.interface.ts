@@ -1,4 +1,5 @@
 import { Document } from 'mongoose';
+
 export interface IMessage extends Document{
     readonly sender_address: string;
     readonly receiver_address: string;

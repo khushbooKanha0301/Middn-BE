@@ -1,4 +1,5 @@
 import { Document } from "mongoose";
+
 export interface IEscrows extends Document {
   readonly user_address: string;
   readonly user_id: string;

@@ -8,7 +8,7 @@ import {
   Post,
   Put,
   Res,
-  Req,
+  Req
 } from "@nestjs/common";
 
 import { ConfigService } from "@nestjs/config";
@@ -39,6 +39,12 @@ export class EscrowsController {
   priceType: "fixed"
   processTime: "24 Hours"
 
+  /**
+   * This endpoint is used to create a new escrow.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/createEscrow")
   async createEscrow(@Req() req: any, @Res() response) {
@@ -152,6 +158,13 @@ export class EscrowsController {
     }
   }
 
+  /**
+   * This endpoint is used to retrieve escrow details by ID.
+   * @param req 
+   * @param response 
+   * @param id 
+   * @returns 
+   */
   @Get("/getEscrowsById/:id")
   async getEscrowsById(
     @Req() req: any,
@@ -192,6 +205,13 @@ export class EscrowsController {
     }
   }
 
+  /**
+   * This endpoint is used to edit escrow details by ID.
+   * @param req 
+   * @param response 
+   * @param id 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/editEscrow/:id")
   async editEscrow(@Req() req: any, @Res() response, @Param("id") id: string) {
@@ -303,6 +323,13 @@ export class EscrowsController {
     }
   }
 
+  /**
+   * This endpoint is used to delete escrow details by ID.
+   * @param req 
+   * @param response 
+   * @param id 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/deleteEscrows/:id")
   async deleteEscrows(
@@ -318,7 +345,14 @@ export class EscrowsController {
     } catch (error) {}
   }
 
-  @SkipThrottle(false)
+  /**
+   * HTTP GET method for fetching escrows by user address
+   * @param req 
+   * @param response 
+   * @param address 
+   * @returns 
+   */
+  @SkipThrottle(false) // Disables throttling for this endpoint
   @Get("/getEscrowsByUser/:address")
   async activeEscrows(
     @Req() req: any,
@@ -345,6 +379,13 @@ export class EscrowsController {
     }
   }
 
+  /**
+   * Retrieve all open escrows for the specified user address
+   * @param req 
+   * @param response 
+   * @param address 
+   * @returns 
+   */
   @Get("/getAllOpenEscrows/:address")
   async getAllOpenEscrows(
     @Req() req: any,
