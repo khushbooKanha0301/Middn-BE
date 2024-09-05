@@ -16,7 +16,15 @@ import { ConfigService } from "@nestjs/config";
 import { EscrowService } from "src/service/escrow/escrows.service";
 import { UserService } from "src/service/user/users.service";
 import { SkipThrottle } from "@nestjs/throttler";
-var jwt = require("jsonwebtoken");
+import { IUser } from "src/interface/users.interface";
+import { Model, ObjectId } from "mongoose";
+import { InjectModel } from "@nestjs/mongoose";
+import { MailerService } from "@nestjs-modules/mailer";
+import { JwtService } from "@nestjs/jwt";
+import { EmailService } from "src/service/email/email.service";
+const moment = require('moment');
+
+const jwt = require("jsonwebtoken");
 const getSignMessage = (address, nonce) => {
   return `Please sign this message for address ${address}:\n\n${nonce}`;
 };
@@ -30,7 +38,11 @@ export class AuthController {
   constructor(
     private readonly configService: ConfigService,
     private readonly userService: UserService,
-    private readonly escrowService: EscrowService
+    private readonly escrowService: EscrowService,
+    private readonly mailerService: MailerService,
+    private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
+    @InjectModel("user") private usersModel: Model<IUser>
   ) {}
 
   /**
@@ -339,4 +351,123 @@ export class AuthController {
     }
   }
 
+  @SkipThrottle(false)
+  @Get("verify-email")
+  async verifyEmail(@Req() req, @Res() res) {
+    try {
+      const token = req.query.token;
+      console.log("token ", token);
+      const payload = this.jwtService.verify(token);
+      console.log("payload ", payload);
+
+      const user = await this.usersModel.findOne({
+        _id: payload.userId,
+        email: payload.email,
+      });
+
+      if (!user) {
+        return res.status(HttpStatus.OK).json({
+          message: "User Not Found",
+        });
+      }
+
+      if (user?.email_verified) {
+        return res.status(HttpStatus.OK).json({
+          message: "User Email Already Verified",
+        });
+      }
+
+      const currentDate = moment.utc().format();
+      if (user && !user.email_verified) {
+        await this.usersModel
+          .updateOne(
+            { _id: user._id },
+            { email_verified: true, updated_at: currentDate }
+          )
+          .exec();
+      }
+      const updateData = await this.usersModel.findById(user._id);
+      if (updateData && updateData?.email && updateData.email_verified) {
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          greeting: `Hello ${
+            updateData?.fname
+              ? updateData?.fname + " " + updateData?.lname
+              : "John Doe"
+          }`,
+          para1: "Thanks for joining our platform!",
+          para2: "As a member of our platform, you can manage your account, purchase token, referrals etc.",
+          para3: `Find out more about in - <a href="https://ico.middn.com/">https://ico.middn.com/</a>`,
+          title: "Welcome Email",
+        };
+
+        const mailSubject = "Middn.io :: Welcome to https://ico.middn.com/";
+        const isVerified = await this.emailService.sendVerificationEmail(
+          updateData,
+          globalContext,
+          mailSubject
+        );
+        if (isVerified) {
+          return res.status(HttpStatus.OK).json({
+            message: "Email successfully verified!",
+          });
+        } else {
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid or expired verification token.",
+          });
+        }
+      } else {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          message: "Failed to update email verification status.",
+        });
+      }
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        const decoded = this.jwtService.decode(req.query.token) as { userId: string; email: string };
+        console.log("decoded ", decoded);
+
+        const user = await this.usersModel.findOne({
+          _id: decoded.userId,
+          email: decoded.email,
+        });
+
+        console.log(user)
+
+        if (user && !user.email_verified) {
+          // Generate a new token
+          const newToken = await this.emailService.generateEmailVerificationToken(user.email, user._id);
+          console.log("newToken ", newToken);
+          const mailUrl = this.configService.get('main_url');
+          
+          // Resend the verification email with the new token
+          const globalContext = {
+            formattedDate: moment().format('dddd, MMMM D, YYYY'),
+            id: user._id,
+            greeting: `Hello ${user?.fname ? user.fname + ' ' + user.lname : 'John Doe'}`,
+            heading: 'New Email Verification Link',
+            confirmEmail: true,
+            para1: "Your previous verification token has expired. Please use the new link below to verify your email.",
+            para2: 'Click the button below to confirm your email address and activate your account.',
+            url: `${mailUrl}auth/verify-email?token=${newToken}`,
+            title: 'Confirm Your Email',
+          };
+
+          const mailSubject = 'Middn.io :: New Email Verification Link';
+          await this.emailService.sendVerificationEmail(user, globalContext, mailSubject);
+
+          return res.status(HttpStatus.UNAUTHORIZED).json({
+            message: 'Expired Verification Token. A new verification email has been sent.',
+          });
+        } else {
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            message: 'User not found or already verified.',
+          });
+        }
+      } else {
+        return res.status(HttpStatus.UNAUTHORIZED).json({
+          message: 'Invalid Verification Token',
+        });
+      }
+    }
+  }
 }

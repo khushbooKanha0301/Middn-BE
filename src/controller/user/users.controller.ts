@@ -37,8 +37,9 @@ import * as geoip from "geoip-lite";
 import { UpdateKycDataDto } from "src/dto/update-kyc.dto";
 import { ReportUserService } from "src/service/report-users/reportUser.service";
 import { IUser } from "src/interface/users.interface";
-
-var jwt = require("jsonwebtoken");
+import { MailerService } from "@nestjs-modules/mailer";
+import { EmailService } from "src/service/email/email.service";
+const jwt = require("jsonwebtoken");
 const getSignMessage = (address, nonce) => {
   return `Please sign this message for address ${address}:\n\n${nonce}`;
 };
@@ -57,6 +58,8 @@ export class UsersController {
     private readonly configService: ConfigService,
     private readonly loginHistoryService: LoginHistoryService,
     private readonly reportUserService: ReportUserService,
+    private readonly mailerService: MailerService,
+    private readonly emailService: EmailService,
     @InjectModel("user") private userModel: Model<IUser>
   ) {}
 
@@ -1203,15 +1206,50 @@ export class UsersController {
           message: "Invalid currency.",
         });
       }
-      updateAccountSettingDto.email_verified = 0;
+      updateAccountSettingDto.email_verified = false;
       updateAccountSettingDto.phone_verified = 0;
       await this.userService.updateAccountSettings(
         UserId,
         updateAccountSettingDto
       );
-      return response.status(HttpStatus.OK).json({
-        message: "Users has been successfully updated.",
-      });
+      const updateData = await this.userService.getUser(UserId);
+      if (
+        updateData?.email &&
+        (!updateData?.email_verified ||
+          updateData?.email_verified === undefined)
+      ) {
+        const mailUrl = this.configService.get("main_url");
+        const token = await this.emailService.generateEmailVerificationToken(updateData?.email, UserId);
+        console.log("token ", token);
+        
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          id: UserId,
+          greeting: `Hello ${updateData?.fname
+            ? updateData?.fname + " " + updateData?.lname
+            : "John Doe" }`,
+          heading: "Welcome!",
+          confirmEmail: true,
+          para1: "Thank you for registering on our platform. You're almost ready to start.",
+          para2: "Simply click the button below to confirm your email address and activate your account.",
+          url: `${mailUrl}auth/verify-email?token=${token}`,
+          title: "Confirm Your Email"
+        };
+        const mailSubject = '[Middn.io] Please verify your email address - https://app.middn.com/';
+        const mailSend = await this.emailService.sendVerificationEmail(updateData, globalContext ,mailSubject)
+        if(!mailSend){
+          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            message: 'Failed to send verification email',
+          });
+        }
+        return response.status(HttpStatus.OK).json({
+          message: "User updated successfully. A verification email has been sent.",
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          message: "User has been successfully updated",
+        });
+      }
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
@@ -1660,6 +1698,30 @@ export class UsersController {
       user.is_2FA_login_verified = true;
       user.google_auth_secret = "";
       await user.save();
+      if (user?.email) {
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          greeting: `Hello ${user?.fname
+            ? user?.fname + " " + user?.lname + ","
+            : "John Doe"}`,
+          para1: "We are reset your 2FA authentication as per your requested via support.",
+          para2: "If you really want to reset 2FA authentication security in your account, then click the button below to confirm and reset 2FA security.",
+          title: "2FA Disable Confirmation by Admin"
+        };
+        
+        this.mailerService
+          .sendMail({
+            to: user?.email,
+            subject: "[Middn.io] :: Disable 2FA Authentication Request",
+            template: "welcome",
+            context: {
+              ...globalContext,
+            },
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
       return res
         .status(HttpStatus.OK)
         .json({ message: "2FA deactivated successfully" });
@@ -1815,12 +1877,40 @@ export class UsersController {
         }
       }
 
-      const data = await this.userService.updateKyc(
+      await this.userService.updateKyc(
         UserId,
         updateKycDto,
         passport_url,
         user_photo_url
       );
+
+      const updateData = await this.userService.getUser(UserId);
+
+      if (updateData?.email) {
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          greeting: `Hello ${updateData?.fname
+            ? updateData?.fname + " " + updateData?.lname
+            : "John Doe"}`,
+          para1: "Thank you for submitting your verification request. We've received your submitted document and other information for identity verification.",
+          para2: "We'll review your information and if all is in order will approve your identity. If the information is incorrect or something missing, we will request this as soon as possible.",
+          title: "KYC Submitted Email"
+        };
+        this.mailerService
+          .sendMail({
+            to: updateData?.email,
+            subject:
+              "[Middn.io] :: Document Submitted for Identity Verification - https://app.middn.com/",
+            template: "welcome",
+            context: {
+              ...globalContext,
+            },
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
+
       return response.status(HttpStatus.OK).json({
         message: "Users has been successfully updated.",
       });
@@ -2002,13 +2092,178 @@ export class UsersController {
         blockUser = await this.reportUserService.createBlockUser(blockUserDto);
       }
 
-      return response.status(HttpStatus.OK).json({
-        status: "success",
-        message: "User Blocked successfully",
-        blockUser: blockUser,
-      });
+      if(blockUser?.userStatus === false) {
+        return response.status(HttpStatus.OK).json({
+          status: "success",
+          message: "User UnBlocked successfully",
+          blockUser: blockUser,
+        });
+      } else {
+        return response.status(HttpStatus.OK).json({
+          status: "success",
+          message: "User Blocked successfully",
+          blockUser: blockUser,
+        });
+      }
+
+      
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  /**
+   * 
+   * @param req 
+   * @param res 
+   * @returns 
+   */
+  @SkipThrottle(false)
+  @Post("LoginFailedEmail")
+  async LoginFailedEmail(@Req() req: any, @Res() res) {
+    try {
+      let updateData = await this.userService.getFindbyAddress(
+        req.headers.authData.verifiedAddress
+      );
+
+      if (updateData?.email) {
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          greeting: `Hello ${updateData?.fname
+            ? updateData?.fname + " " + updateData?.lname
+            : "John Doe"}`,
+          title: "Unusual Login Email",
+          para1: `Someone tried to log in too many times in your <a href="https://app.middn.com/">https://app.middn.com/</a> account.`
+        };
+        
+
+        this.mailerService
+          .sendMail({
+            to: updateData?.email,
+            subject:
+              "[Middn.io] :: Unusual Login Attempt on https://app.middn.com/ !!!!",
+            template: "welcome",
+            context: {
+              ...globalContext,
+            },
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
+      return res.status(HttpStatus.OK).json({ message: "Mail send success" });
+    } catch (err) {
+      return res.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  /**
+   * 
+   * @param response 
+   * @param req 
+   * @returns 
+   */
+  @SkipThrottle(false)
+  @Post("/changePassword")
+  async changePassword(@Res() response, @Req() req: any) {
+    try {
+      const { oldPassword, newPassword, confirmPassword } = req.body;
+      const userAddress = req.headers.authData.verifiedAddress;
+
+      // Fetch user by address
+      const user = await this.userService.getFindbyAddress(userAddress);
+
+      // Check if user exists
+      if (!user) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "User not found.",
+        });
+      }
+
+      // Validate old password
+      const isOldPasswordValid = await this.userService.comparePasswords(
+        oldPassword,
+        user.password
+      );
+      if (!isOldPasswordValid) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "Old password is incorrect.",
+        });
+      }
+
+      // Check if new passwords match
+      if (newPassword !== confirmPassword) {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "New password and confirm password do not match.",
+        });
+      }
+
+      // Hash the new password
+      const hashedNewPassword = await this.userService.hashPassword(
+        newPassword
+      );
+
+      // Update the password in the database
+      const changePassword = await this.userModel
+        .updateOne({ email: user.email }, { password: hashedNewPassword })
+        .exec();
+
+      // Check if password change was successful
+      if (changePassword.modifiedCount > 0) {
+        return response.status(HttpStatus.OK).json({
+          message: "Your password has been changed successfully.",
+        });
+      } else {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          message: "Password change failed.",
+        });
+      }
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json({
+        message: err.message,
+      });
+    }
+  }
+
+  /**
+   * 
+   */
+  @SkipThrottle(false)
+  @Post("SendNewMessage")
+  async SendNewMessage(@Req() req: any, @Res() res) {
+    try {
+      let updateData = await this.userService.getFindbyAddress(
+        req.headers.authData.verifiedAddress
+      );
+
+      if (updateData?.email) {
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          greeting: `Hi ${updateData?.fname
+            ? updateData?.fname + " " + updateData?.lname
+            : "John Doe"} , `,
+          title: "Send Email to User",
+          message: req.body.message
+        };
+        
+
+        this.mailerService
+          .sendMail({
+            to: updateData?.email,
+            subject:
+              "[Middn.io] New Message - https://app.middn.com/ !!!!",
+            template: "welcome",
+            context: {
+              ...globalContext,
+            },
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
+      return res.status(HttpStatus.OK).json({ message: "Mail send success" });
+    } catch (err) {
+      return res.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
 }

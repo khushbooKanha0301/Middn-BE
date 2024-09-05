@@ -35,7 +35,7 @@ export class UpdateAccountSettingsDto {
 
 	@IsOptional()
 	@IsNumber()
-	email_verified: number;
+	email_verified: boolean;
 
 	@IsOptional()
 	@IsNumber()

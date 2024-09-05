@@ -86,9 +86,6 @@ export class CreateUserDto {
 	user_status: boolean;
 
 	@IsOptional()
-	email_verified: number;
-
-	@IsOptional()
 	phone_verified: number;
 
 	@IsOptional()
@@ -102,4 +99,9 @@ export class CreateUserDto {
 	
 	@IsOptional()
 	kyc_submitted_date: string;
+
+	@IsOptional()
+	@IsString()
+	email_verified: boolean;
+
 }

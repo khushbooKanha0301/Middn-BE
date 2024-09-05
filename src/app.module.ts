@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, RequestMethod } from "@nestjs/common";
+import { Module, MiddlewareConsumer } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -8,7 +8,7 @@ import { TradeController } from "./controller/trade/trade.controller";
 import { UserSchema } from "./schema/user.schema";
 import { UserService } from "./service/user/users.service";
 import { AuthenticateMiddleware } from "./middleware/authenticate.middleware";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule , ConfigService} from "@nestjs/config";
 import { MessagesController } from "./controller/message/messages.controller";
 import { MessageService } from "./service/message/message.service";
 import configuration from "./config/configuration";
@@ -28,6 +28,12 @@ import { EscrowService } from "./service/escrow/escrows.service";
 import { ReportUsersSchema } from "./schema/reportUsers.schema";
 import { BlockUsersSchema } from "./schema/blockUser.schema";
 import { ReportUserService } from "./service/report-users/reportUser.service";
+import { MailerModule } from "@nestjs-modules/mailer";
+import { join } from "path";
+import { HandlebarsAdapter } from "@nestjs-modules/mailer/dist/adapters/handlebars.adapter";
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { JwtModule } from '@nestjs/jwt';
+import { EmailService } from "./service/email/email.service";
 
 @Module({
   imports: [
@@ -46,9 +52,41 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
     MongooseModule.forFeature([
       { name: "block_users", schema: BlockUsersSchema },
     ]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('NEST_JWT_EMAIL_SECRET'),
+        signOptions: { expiresIn: '120s' },
+      }),
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+    }),
+    MailerModule.forRoot({
+      transport: {
+        host: process.env.NEST_MAIL_HOST,
+        port: process.env.NEST_MAIL_PORT,
+        //secure: false,
+        auth: {
+          user: process.env.NEST_MAIL_USER,
+          pass: process.env.NEST_MAIL_PASSWORD,
+        },
+      },
+      template: {
+        dir: join(__dirname, "mails"),
+        adapter: new HandlebarsAdapter(),
+        options: {
+          strict: true,
+        },
+      },
+      defaults: {
+        from: process.env.NEST_MAIL_FROM_MAIL,
+      },
     }),
     ThrottlerModule.forRoot({
       ttl: 5,
@@ -71,6 +109,7 @@ import { ReportUserService } from "./service/report-users/reportUser.service";
     EscrowService,
     LoginHistoryService,
     ReportUserService,
+    EmailService,
     TradeService,
     {
       provide: APP_GUARD,

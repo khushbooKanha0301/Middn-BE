@@ -52,8 +52,6 @@ export class User {
 	@Prop({ default: false })
 	kyc_completed: boolean;
 	@Prop({ default: 0 })
-	email_verified: number;
-	@Prop({ default: 0 })
 	phone_verified: number;
 	@Prop()
 	passport_url: string;
@@ -65,5 +63,7 @@ export class User {
 	admin_checked_at: string;
 	@Prop({ default: false })
 	user_status:boolean;
+	@Prop({ default: false })
+	email_verified: boolean;
 }	
 export const UserSchema = SchemaFactory.createForClass(User);

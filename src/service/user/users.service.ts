@@ -7,6 +7,7 @@ import { UpdateUserProfileDto } from "src/dto/update-users-profile.dto";
 import { ConfigService } from "@nestjs/config";
 import { UpdateAccountSettingsDto } from "src/dto/update-account-settings.dto";
 import { UpdateKycDataDto } from "src/dto/update-kyc.dto";
+import * as bcrypt from 'bcrypt';
 const moment = require('moment');
 
 @Injectable()
@@ -15,10 +16,12 @@ export class UserService {
     @InjectModel("user") private userModel: Model<IUser>,
     private configService: ConfigService
   ) {}
+
   async createUser(CreateUserDto: CreateUserDto): Promise<IUser> {
     const newUser = await new this.userModel(CreateUserDto);
     return newUser.save();
   }
+  
   async updateUser(
     userId: string,
     body: UpdateUserProfileDto,
@@ -86,12 +89,14 @@ export class UserService {
     }
     return existingUser;
   }
+
   async getFindbyAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
       .exec();
     return existingUser;
   }
+
   async deleteUser(userId: string): Promise<IUser> {
     const deletedUser = await this.userModel.findByIdAndDelete(userId);
     if (!deletedUser) {
@@ -99,11 +104,13 @@ export class UserService {
     }
     return deletedUser;
   }
+
   async getAllUsersExceptAuth(userId: string): Promise<any> {
     const allUsers = await this.userModel.find();
     const existingUser = allUsers.filter((user) => user.id !== userId);
     return existingUser;
   }
+
   async getUserDetailByAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
@@ -113,6 +120,7 @@ export class UserService {
     }
     return existingUser;
   }
+
   async getOnlyUserBioByAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
@@ -173,7 +181,7 @@ export class UserService {
         });
       });
     }
-    var currentDate = moment.utc().format();
+    const currentDate = moment.utc().format();
 
     const updateObject = {
       ...UpdateKycDto,
@@ -207,6 +215,7 @@ export class UserService {
     }
     return [];
   }
+
   async getFindbyPhone(_id: string, phone: string): Promise<any>{
     const existingUser = await this.userModel
     .findOne({ $and: [{ _id }, { phone }] })
@@ -219,7 +228,6 @@ export class UserService {
   }
 
   async updateUserById(userId: string,body:any): Promise<IUser> {
-   
     const existingUser = await this.userModel.findOneAndUpdate(
       { wallet_address: userId },
       { ...body },
@@ -230,6 +238,18 @@ export class UserService {
       throw new NotFoundException(`User #${userId} not found`);
     }
     return existingUser;
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  async comparePasswords(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
   }
 
 }
