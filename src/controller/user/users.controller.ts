@@ -39,6 +39,7 @@ import { ReportUserService } from "src/service/report-users/reportUser.service";
 import { IUser } from "src/interface/users.interface";
 import { MailerService } from "@nestjs-modules/mailer";
 import { EmailService } from "src/service/email/email.service";
+
 const jwt = require("jsonwebtoken");
 const getSignMessage = (address, nonce) => {
   return `Please sign this message for address ${address}:\n\n${nonce}`;
@@ -46,6 +47,25 @@ const getSignMessage = (address, nonce) => {
 const Web3 = require("web3");
 const web3 = new Web3("https://cloudflare-eth.com/");
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const crypto = require('crypto');
+
+// Ensure the secret key is 32 bytes long
+const secretKey = crypto.createHash('sha256').update('your-secret-key').digest('base64').substr(0, 32);
+const iv = crypto.randomBytes(16); // Initialization vector
+
+function encryptEmail(email) {
+  try {
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(secretKey), iv);
+    let encrypted = cipher.update(email, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted; // Combine IV with encrypted email
+  } catch (error) {
+    console.error("Encryption error:", error);
+    return null;
+  }
+}
+
 
 @SkipThrottle()
 @Controller("users")
@@ -206,7 +226,7 @@ export class UsersController {
         userInfo.google_auth_secret = undefined;
         return response.status(HttpStatus.OK).json({
           token: token,
-          userInfo: userInfo,
+          user_id: userInfo._id,
           imageUrl: imageUrl ? imageUrl : null,
         });
       } else {
@@ -674,17 +694,34 @@ export class UsersController {
       }
 
       if (updateAccountSettingDto.email) {
-        let userEmail = await this.userService.getFindbyEmail(
-          UserId,
-          updateAccountSettingDto.email
-        );
-        if (userEmail.length) {
-          return response.status(HttpStatus.BAD_REQUEST).json({
-            message: "Email already Exist.",
+        try {
+          // Check if the email already exists in the system
+          const userEmail = await this.userService.getFindbyEmail(updateAccountSettingDto.email);
+          
+          // Safely check if userEmail exists before accessing its properties
+          if (userEmail && userEmail._id && userEmail._id.toString() !== UserId) {
+            return response.status(HttpStatus.BAD_REQUEST).json({
+              message: "Email already exists.",
+            });
+          }
+      
+          // Check if the email is being updated and is verified
+          const userEmailCheck = await this.userService.getFindbyId(UserId);
+         
+          // If the email is verified and the user is trying to change it
+          if (userEmailCheck && userEmailCheck.email_verified && userEmailCheck.email !== updateAccountSettingDto.email) {
+            return response.status(HttpStatus.BAD_REQUEST).json({
+              message: "Your email address is already verified and cannot be changed.",
+            });
+          }
+        } catch (error) {
+          console.error("Error while checking email existence: ", error);
+          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            message: "An error occurred while processing the request.",
           });
         }
       }
-
+      
       if (!updateAccountSettingDto.phone) {
         return response.status(HttpStatus.BAD_REQUEST).json({
           message: "Phone number is missing.",
@@ -1206,21 +1243,20 @@ export class UsersController {
           message: "Invalid currency.",
         });
       }
-      updateAccountSettingDto.email_verified = false;
-      updateAccountSettingDto.phone_verified = 0;
+     
       await this.userService.updateAccountSettings(
         UserId,
         updateAccountSettingDto
       );
       const updateData = await this.userService.getUser(UserId);
       if (
+        updateData &&
         updateData?.email &&
         (!updateData?.email_verified ||
           updateData?.email_verified === undefined)
       ) {
         const mailUrl = this.configService.get("main_url");
         const token = await this.emailService.generateEmailVerificationToken(updateData?.email, UserId);
-        console.log("token ", token);
         
         const globalContext = {
           formattedDate: moment().format("dddd, MMMM D, YYYY"),
@@ -1370,6 +1406,37 @@ export class UsersController {
       if (!User.fname_alias) User.fname_alias = "John";
       if (!User.lname_alias) User.lname_alias = "Doe";
 
+      if (User.is_2FA_login_verified !== undefined) {
+        response.setHeader("2FA", User.is_2FA_login_verified);
+        User.is_2FA_login_verified = undefined;
+      }
+
+      if (User.is_2FA_enabled !== undefined) {
+        response.setHeader("2FA_enable", User.is_2FA_enabled);
+        User.is_2FA_enabled = undefined;
+      }
+
+      if (User.is_verified !== undefined) {
+        response.setHeader("kyc_verify", User.is_verified);
+        User.is_verified = undefined;
+      }
+
+      if (User.kyc_completed !== undefined) {
+        response.setHeader("kyc_status", User.kyc_completed);
+        User.kyc_completed = undefined;
+      }
+
+      if (User.email_verified !== undefined) {
+        response.setHeader("is_email_verified", User.email_verified);
+        User.email_verified = undefined;
+      }
+
+      if (User.email) {
+        const encryptedEmail = encryptEmail(User.email);
+        response.setHeader("is_email", encryptedEmail);
+        User.email = undefined;
+      }
+      
       return response.status(HttpStatus.OK).json({
         message: "User found successfully",
         User,
@@ -1698,7 +1765,7 @@ export class UsersController {
       user.is_2FA_login_verified = true;
       user.google_auth_secret = "";
       await user.save();
-      if (user?.email) {
+      if (user && user?.email && user?.email_verified) {
         const globalContext = {
           formattedDate: moment().format("dddd, MMMM D, YYYY"),
           greeting: `Hello ${user?.fname
@@ -1709,22 +1776,27 @@ export class UsersController {
           title: "2FA Disable Confirmation by Admin"
         };
         
-        this.mailerService
-          .sendMail({
-            to: user?.email,
-            subject: "[Middn.io] :: Disable 2FA Authentication Request",
-            template: "welcome",
-            context: {
-              ...globalContext,
-            },
-          })
-          .catch((error) => {
-            console.log(error);
+        const mailSubject = `[Middn.io] :: Disable 2FA Authentication Request`;
+        const isVerified = await this.emailService.sendVerificationEmail(
+          user,
+          globalContext,
+          mailSubject
+        );
+
+        if (!isVerified) {
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid or expired verification token.",
           });
-      }
-      return res
+        } else {
+          return res
+          .status(HttpStatus.OK)
+          .json({ message: "2FA deactivated successfully" });
+        }
+      } else {
+        return res
         .status(HttpStatus.OK)
         .json({ message: "2FA deactivated successfully" });
+      }
     } catch (err) {
       return res.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
@@ -1886,7 +1958,10 @@ export class UsersController {
 
       const updateData = await this.userService.getUser(UserId);
 
-      if (updateData?.email) {
+      if ( updateData &&
+        updateData?.email &&
+        updateData?.email_verified
+      ) {
         const globalContext = {
           formattedDate: moment().format("dddd, MMMM D, YYYY"),
           greeting: `Hello ${updateData?.fname
@@ -1896,19 +1971,22 @@ export class UsersController {
           para2: "We'll review your information and if all is in order will approve your identity. If the information is incorrect or something missing, we will request this as soon as possible.",
           title: "KYC Submitted Email"
         };
-        this.mailerService
-          .sendMail({
-            to: updateData?.email,
-            subject:
-              "[Middn.io] :: Document Submitted for Identity Verification - https://app.middn.com/",
-            template: "welcome",
-            context: {
-              ...globalContext,
-            },
-          })
-          .catch((error) => {
-            console.log(error);
+        const mailSubject = `[Middn.io] :: Document Submitted for Identity Verification - https://app.middn.com/`;
+        const isVerified = await this.emailService.sendVerificationEmail(
+          updateData,
+          globalContext,
+          mailSubject
+        );
+
+        if (isVerified) {
+          return response.status(HttpStatus.OK).json({
+            message: "Users has been successfully updated.",
           });
+        } else {
+          return response.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid or expired verification token.",
+          });
+        }
       }
 
       return response.status(HttpStatus.OK).json({
@@ -2034,8 +2112,7 @@ export class UsersController {
       const reqData = req.body;
       const toBlockUser = reqData?.to_block_user;
       const userStatus = reqData?.userStatus;
-      const fromBlockUser = req.headers.authData.verifiedAddress;
-     
+      const fromBlockUser = req.headers.authData.verifiedAddress;   
       if (!toBlockUser) {
         return response
           .status(HttpStatus.BAD_REQUEST)
@@ -2080,7 +2157,6 @@ export class UsersController {
         created_at: moment.utc().format(),
       };
       let blockUser;
-
       if (isAlreadyReported) {
         const UserId = isAlreadyReported._id;
 
@@ -2126,7 +2202,7 @@ export class UsersController {
         req.headers.authData.verifiedAddress
       );
 
-      if (updateData?.email) {
+      if (updateData && updateData?.email && updateData?.email_verified) {
         const globalContext = {
           formattedDate: moment().format("dddd, MMMM D, YYYY"),
           greeting: `Hello ${updateData?.fname
@@ -2135,21 +2211,23 @@ export class UsersController {
           title: "Unusual Login Email",
           para1: `Someone tried to log in too many times in your <a href="https://app.middn.com/">https://app.middn.com/</a> account.`
         };
-        
+          
+        const mailSubject = `[Middn.io] :: Unusual Login Attempt on https://app.middn.com/ !!!!`;
+        const isVerified = await this.emailService.sendVerificationEmail(
+          updateData,
+          globalContext,
+          mailSubject
+        );
 
-        this.mailerService
-          .sendMail({
-            to: updateData?.email,
-            subject:
-              "[Middn.io] :: Unusual Login Attempt on https://app.middn.com/ !!!!",
-            template: "welcome",
-            context: {
-              ...globalContext,
-            },
-          })
-          .catch((error) => {
-            console.log(error);
+        if (isVerified) {
+          return res.status(HttpStatus.OK).json({
+            message: "Email successfully sent",
           });
+        } else {
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid or expired verification token.",
+          });
+        }
       }
       return res.status(HttpStatus.OK).json({ message: "Mail send success" });
     } catch (err) {
@@ -2236,7 +2314,7 @@ export class UsersController {
         req.headers.authData.verifiedAddress
       );
 
-      if (updateData?.email) {
+      if (updateData && updateData?.email && updateData?.email_verified) {
         const globalContext = {
           formattedDate: moment().format("dddd, MMMM D, YYYY"),
           greeting: `Hi ${updateData?.fname
@@ -2246,20 +2324,22 @@ export class UsersController {
           message: req.body.message
         };
         
+        const mailSubject = `[Middn.io] New Message - https://app.middn.com/ !!!!`;
+        const isVerified = await this.emailService.sendVerificationEmail(
+          updateData,
+          globalContext,
+          mailSubject
+        );
 
-        this.mailerService
-          .sendMail({
-            to: updateData?.email,
-            subject:
-              "[Middn.io] New Message - https://app.middn.com/ !!!!",
-            template: "welcome",
-            context: {
-              ...globalContext,
-            },
-          })
-          .catch((error) => {
-            console.log(error);
+        if (isVerified) {
+          return res.status(HttpStatus.OK).json({
+            message: "Email successfully sent",
           });
+        } else {
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            message: "Invalid or expired verification token.",
+          });
+        }
       }
       return res.status(HttpStatus.OK).json({ message: "Mail send success" });
     } catch (err) {

@@ -17,7 +17,6 @@ export class EscrowService {
       const newEscrow = new this.escrowModel(CreateEscrowDto);
       return await newEscrow.save();
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -86,7 +85,6 @@ export class EscrowService {
       }
       return await escrowsQuery.exec();
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -103,7 +101,6 @@ export class EscrowService {
       const count = await escrowsQuery.countDocuments();
       return count;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -193,7 +190,6 @@ export class EscrowService {
 
       return await escrowsQuery.exec();
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -229,7 +225,6 @@ export class EscrowService {
       const count = await escrowsQuery.countDocuments();
       return count;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -315,7 +310,6 @@ export class EscrowService {
       }
       return existingEscrow;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -337,7 +331,6 @@ export class EscrowService {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -357,7 +350,6 @@ export class EscrowService {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -379,7 +371,6 @@ export class EscrowService {
         throw new NotFoundException(`Escrow #${id} not found`);
       }
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -393,7 +384,6 @@ export class EscrowService {
       });
       return escrowsQuery;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -470,7 +460,6 @@ export class EscrowService {
 
       return await escrowsQuery.exec();
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -494,7 +483,6 @@ export class EscrowService {
       const count = await escrowsQuery.countDocuments();
       return count;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -626,7 +614,6 @@ export class EscrowService {
 
       return await escrowsQuery.exec();
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -645,7 +632,6 @@ export class EscrowService {
       const count = await escrowsQuery.countDocuments();
       return count;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }

@@ -160,7 +160,6 @@ export class AuthController {
         });
       }
     } catch (err) {
-      console.log(err);
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
@@ -356,10 +355,8 @@ export class AuthController {
   async verifyEmail(@Req() req, @Res() res) {
     try {
       const token = req.query.token;
-      console.log("token ", token);
       const payload = this.jwtService.verify(token);
-      console.log("payload ", payload);
-
+     
       const user = await this.usersModel.findOne({
         _id: payload.userId,
         email: payload.email,
@@ -397,11 +394,11 @@ export class AuthController {
           }`,
           para1: "Thanks for joining our platform!",
           para2: "As a member of our platform, you can manage your account, purchase token, referrals etc.",
-          para3: `Find out more about in - <a href="https://ico.middn.com/">https://ico.middn.com/</a>`,
+          para3: `Find out more about in - <a href="https://app.middn.com/">https://app.middn.com/</a>`,
           title: "Welcome Email",
         };
 
-        const mailSubject = "Middn.io :: Welcome to https://ico.middn.com/";
+        const mailSubject = "Middn.io :: Welcome to https://app.middn.com/";
         const isVerified = await this.emailService.sendVerificationEmail(
           updateData,
           globalContext,
@@ -424,19 +421,16 @@ export class AuthController {
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         const decoded = this.jwtService.decode(req.query.token) as { userId: string; email: string };
-        console.log("decoded ", decoded);
-
+       
         const user = await this.usersModel.findOne({
           _id: decoded.userId,
           email: decoded.email,
         });
 
-        console.log(user)
-
-        if (user && !user.email_verified) {
+        if (user && user?.email && (!user?.email_verified ||
+          user?.email_verified === undefined)) {
           // Generate a new token
           const newToken = await this.emailService.generateEmailVerificationToken(user.email, user._id);
-          console.log("newToken ", newToken);
           const mailUrl = this.configService.get('main_url');
           
           // Resend the verification email with the new token

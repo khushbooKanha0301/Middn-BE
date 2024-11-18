@@ -82,14 +82,14 @@ export class UserService {
   async getUser(userId: string): Promise<any> {
     const existingUser = await this.userModel
       .findById(userId)
-      .select("-_id -__v -nonce -google_auth_secret")
+      .select("-_id -__v -nonce -google_auth_secret -wallet_address -is_banned -user_status -phone_verified")
       .exec();
     if (!existingUser) {
       throw new NotFoundException(`User #${userId} not found`);
     }
     return existingUser;
   }
-
+  
   async getFindbyAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
@@ -205,10 +205,10 @@ export class UserService {
     return existingUser;
   }
 
-  async getFindbyEmail(_id: string, email: string): Promise<any>{
+  async getFindbyId(userId: string): Promise<any>{
     const existingUser = await this.userModel
-    .findOne({ $and: [{ _id }, { email }] })
-    .select("-_id email")
+    .findById(userId)
+    .select("_id email email_verified")
     .exec();
     if(existingUser){
       return existingUser
@@ -216,6 +216,16 @@ export class UserService {
     return [];
   }
 
+  async getFindbyEmail(email: string): Promise<any>{
+    const existingUser = await this.userModel
+    .findOne({email})
+    .select("_id email email_verified")
+    .exec();
+    if(existingUser){
+      return existingUser
+    }
+    return [];
+  }
   async getFindbyPhone(_id: string, phone: string): Promise<any>{
     const existingUser = await this.userModel
     .findOne({ $and: [{ _id }, { phone }] })

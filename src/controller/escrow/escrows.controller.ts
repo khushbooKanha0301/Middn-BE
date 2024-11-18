@@ -34,7 +34,7 @@ export class EscrowsController {
   escrowType: "seller"
   maxPrice: ""
   minPrice:  ""
-  object: "Jewelery"
+  object: "Jewlery"
   price : "10"
   priceType: "fixed"
   processTime: "24 Hours"
@@ -80,7 +80,7 @@ export class EscrowsController {
         errorMessage = "Description is missing";
       } else if (!reqData?.processTime) {
         errorMessage = "Process Time is missing";
-      } else if ((reqData?.object != 'Jewelery') || 
+      } else if ((reqData?.object != 'Jewlery') || 
       (reqData?.category != 'high_value_items') ||  
       (reqData?.processTime != '24 Hours')
       ) {
@@ -153,7 +153,6 @@ export class EscrowsController {
         },
       });
     } catch (err) {
-      console.log(err);
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }
@@ -248,7 +247,7 @@ export class EscrowsController {
         errorMessage = "Description is missing";
       } else if (!reqData?.processTime) {
         errorMessage = "Process Time is missing";
-      } else if ((reqData?.object != 'Jewelery') || 
+      } else if ((reqData?.object != 'Jewlery') || 
       (reqData?.category != 'high_value_items') ||  
       (reqData?.processTime != '24 Hours')
       ) {
@@ -374,7 +373,6 @@ export class EscrowsController {
         });
       }
     } catch (err) {
-      console.log(err);
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }

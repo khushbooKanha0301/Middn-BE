@@ -83,9 +83,6 @@ export class CreateUserDto {
 	is_banned: boolean;
 
 	@IsOptional()
-	user_status: boolean;
-
-	@IsOptional()
 	phone_verified: number;
 
 	@IsOptional()

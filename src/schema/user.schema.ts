@@ -61,8 +61,7 @@ export class User {
 	kyc_submitted_date: string;
 	@Prop()
 	admin_checked_at: string;
-	@Prop({ default: false })
-	user_status:boolean;
+	
 	@Prop({ default: false })
 	email_verified: boolean;
 }	

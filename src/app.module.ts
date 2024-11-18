@@ -34,6 +34,7 @@ import { HandlebarsAdapter } from "@nestjs-modules/mailer/dist/adapters/handleba
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { JwtModule } from '@nestjs/jwt';
 import { EmailService } from "./service/email/email.service";
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
@@ -52,26 +53,32 @@ import { EmailService } from "./service/email/email.service";
     MongooseModule.forFeature([
       { name: "block_users", schema: BlockUsersSchema },
     ]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('NEST_JWT_EMAIL_SECRET'),
-        signOptions: { expiresIn: '120s' },
-      }),
+    CacheModule.register({
+      ttl: 5, // Cache time-to-live in seconds
+      max: 100, // Maximum number of items in cache
     }),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
     }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('NEST_JWT_EMAIL_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
+    }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/images/', // Serve files from this URL path (e.g., /assets/image.png)
+      exclude: ['/'], // Prevent serving an index file at the root URL
     }),
     MailerModule.forRoot({
       transport: {
         host: process.env.NEST_MAIL_HOST,
         port: process.env.NEST_MAIL_PORT,
-        //secure: false,
+        secure: false,
         auth: {
           user: process.env.NEST_MAIL_USER,
           pass: process.env.NEST_MAIL_PASSWORD,

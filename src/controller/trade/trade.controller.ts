@@ -76,7 +76,6 @@ export class TradeController {
         });
       }
     } catch (err) {
-      console.log(err);
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
     }
   }

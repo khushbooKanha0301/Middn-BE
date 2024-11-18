@@ -15,7 +15,6 @@ export class TradeService {
       const newTrade = new this.tradeModel(CreateTradeDto);
       return newTrade.save();
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -28,7 +27,6 @@ export class TradeService {
       .exec();
       return existingTrade;
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }

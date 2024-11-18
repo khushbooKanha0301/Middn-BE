@@ -6,9 +6,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stijndv.com/fonts/Eudoxus-Sans.css">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet"
         type="text/css">
     <style type="text/css">
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
 
         #outlook a {
@@ -43,7 +45,7 @@
     </style>
 </head>
 
-<body style="background: #E5E5E5;">
+<body>
     <table width="100%" cellspacing="0" cellpadding="0" border="0" align="center" bgcolor="#F6FAFB">
         <tbody>
             <tr>
@@ -54,21 +56,21 @@
                             <tr>
                                 <td style="padding: 40px 0 0; text-align: center; font-size: 14px;">
                                     <div class="modal-header"
-                                        style="font-size: 32px; font-weight: 700; line-height: 40.32px; letter-spacing: -0.03em; text-align: center; color: #FFFFFF;padding:0 32px ">
+                                        style="font-size: 32px; font-weight: 700; line-height: 24px; letter-spacing: -0.03px; text-align: center; color: #FFFFFF;padding:0 40px ">
                                         <div class="modal-title"
-                                            style="width: 100%;align-items: center;justify-content: space-between;margin-bottom:32px">
+                                            style="width: 100%;align-items: center;justify-content: space-between;margin-bottom:40px">
                                             <table role="presentation" cellspacing="0" cellpadding="0" border="0"
                                                 width="100%">
                                                 <tr>
-                                                    <td align="left" valign="middle" >
+                                                    <td align="left" valign="middle">
                                                         <span>
                                                             <img src="https://api.middn.com/images/middnIcon.png"
                                                                 alt="SVG Image" style="max-width: 100%; height: auto;">
                                                         </span>
                                                     </td>
-                                                    <td align="right" valign="middle" >
+                                                    <td align="right" valign="middle">
                                                         <p class="mail-date"
-                                                            style="font-size: 12px; line-height: 24px; font-weight: 500; margin: 0;color:#FFFFFFDE; float:right;font-family: 'Manrope', sans-serif;letter-spacing: 0.2px;">
+                                                            style="font-size: 14px; line-height: 24px; margin: 0;color:#FFFFFFDE; font-weight: 400; float:right;font-family: 'Manrope', 'Roboto', sans-serif;letter-spacing: 0.2px;">
                                                             {{formattedDate}}</p>
                                                     </td>
                                                 </tr>
@@ -76,7 +78,7 @@
                                         </div>
                                         {{#if heading}}
                                         <h4 class="modal-head"
-                                            style="line-height: 40px;margin-top:16px;display:table;width:100%;text-align: center; margin-bottom: 20px; font-family:'Eudoxus Sans', sans-serif;">
+                                            style="line-height: 40px;margin-top:16px;display:table;width:100%;text-align: center; margin-bottom: 20px; font-family:'Eudoxus Sans', 'Roboto', sans-serif;">
                                             {{heading}}</h4>
                                         {{/if}}
                                     </div>
@@ -84,15 +86,18 @@
                             </tr>
                             <tr>
                                 <td>
-                                    <hr style="margin: 0px 32px 0px; border-color: #656565;" />
+                                    <hr style="margin: 0px 40px 0px; border-color: #656565;" />
                                 </td>
                             </tr>
                             <tr>
                                 <td>
                                     <div
-                                        style="padding: 0 32px; font-size: 16px; line-height: 1.4; font-weight: 500; margin: 20px 0; color:#FFFFFF; font-family: 'Eudoxus Sans', sans-serif;">
-                                        <p style="color:#FFFFFF;font-weight: 700;">{{greeting}}</p>
+                                        style="padding: 0 40px; font-size: 16px; letter-spacing: -0.1px; line-height: 1.4; margin: 20px 0; color:#FFFFFF; font-family: 'Eudoxus Sans', 'Roboto', sans-serif;">
+                                        <div style="color:#FFFFFF;font-weight: 700;">{{greeting}}</div>
 
+                                        {{#if message}}
+                                        <span>{{{message}}}</span>
+                                        {{/if}}
                                         {{#if para1}}
                                         <p style="color:#FFFFFF;">{{{para1}}}</p>
                                         {{/if}}
@@ -139,14 +144,14 @@
                                         {{/if}}
                                     </div>
                                     <div
-                                        style="padding: 0 32px 20px; text-align: center; font-size: 16px; font-weight: 500; line-height: 1.4; letter-spacing: -0.03em; color: #FFFFFF; margin-top: 40px;">
+                                        style="padding: 0 40px 40px; text-align: center; font-size: 16px; line-height: 1.4; letter-spacing: -0.03em; color: #FFFFFF; margin-top: 40px;">
                                         <p
-                                            style="margin-bottom: 8px; line-height: 28px; font-family: 'Eudoxus Sans', sans-serif;">
+                                            style="margin-bottom: 8px; line-height: 28px; font-family: 'Eudoxus Sans', 'Roboto', sans-serif;">
                                             Need help? Please feel free to reach us on our website or by email.</p>
                                         <a href="#"
-                                            style="margin-bottom: 12px; color:#FFFFFF; text-decoration: none; display: block; font-family: 'Eudoxus Sans', sans-serif;">support@middn.com</a>
+                                            style="margin-bottom: 12px; color:#FFFFFF; text-decoration: none; display: block; font-family: 'Eudoxus Sans', 'Roboto', sans-serif;">support@middn.com</a>
                                         <p
-                                            style="margin: 0; line-height: 20.16px; font-size: 16px; font-weight: 500; font-family: 'Eudoxus Sans', sans-serif;">
+                                            style="margin: 0; line-height: 20.16px; font-size: 16px; font-family: 'Eudoxus Sans', 'Roboto',  sans-serif;">
                                             Thanks.<br /> The Middn Team</p>
                                     </div>
                                 </td>
@@ -157,7 +162,7 @@
             </tr>
             <tr>
                 <td style="padding: 10px 0 16px; font-size: 0px;">
-                    <div style="padding-top: 10px; text-align: center; padding: 0 32px;">
+                    <div style="padding-top: 10px; text-align: center; padding: 0 40px;">
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                             <tr>
                                 <td align="center" valign="middle" style="padding-right: 10px;">
@@ -180,10 +185,10 @@
             <tr>
                 <td>
                     <p
-                        style="color: #00000066; font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 500; line-height: 21.86px; letter-spacing: -0.03em; text-align: center; margin: 0;">
+                        style="color: #00000066; font-family: 'Manrope', 'Roboto', sans-serif; font-size: 16px;  line-height: 21.86px; letter-spacing: -0.03em; text-align: center; margin: 0;">
                         ©Middn.io All rights reserved.</p>
                     <p
-                        style="color: #00000066; font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 500; line-height: 21.86px; letter-spacing: -0.03em; text-align: center; margin-top: 8px; margin-bottom: 32px;">
+                        style="color: #00000066; font-family: 'Manrope', 'Roboto', sans-serif; font-size: 16px;  line-height: 21.86px; letter-spacing: -0.03em; text-align: center; margin-top: 8px; margin-bottom: 32px;">
                         France.</p>
                 </td>
             </tr>
